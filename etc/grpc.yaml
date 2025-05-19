@@ -2,7 +2,7 @@
 Grpc:
   Endpoint:           # gRPC 服务端地址
   XToken:                    # 认证用的 x-token
-  StreamPingIntervalSec: 30              # Stream心跳包发送间隔（秒）
+  StreamPingIntervalSec: 20              # Stream心跳包发送间隔（秒）
   KeepalivePingIntervalSec: 12           # gRPC底层keepalive间隔（秒）
   KeepalivePingTimeoutSec: 4             # gRPC底层keepalive超时（秒）
   InitialWindowSize: 1073741824          # 单个流窗口大小（字节）, 1GB
