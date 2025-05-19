@@ -1,0 +1,21 @@
+# GRPC特有配置
+Grpc:
+  Endpoint:           # gRPC 服务端地址
+  XToken:                    # 认证用的 x-token
+  StreamPingIntervalSec: 30              # Stream心跳包发送间隔（秒）
+  KeepalivePingIntervalSec: 12           # gRPC底层keepalive间隔（秒）
+  KeepalivePingTimeoutSec: 4             # gRPC底层keepalive超时（秒）
+  InitialWindowSize: 1073741824          # 单个流窗口大小（字节）, 1GB
+  InitialConnWindowSize: 1073741824      # 整个连接窗口大小（字节）, 1GB
+  MaxCallSendMsgSize: 67108864           # 单条消息最大发送字节数, 64MB
+  MaxCallRecvMsgSize: 1073741824         # 单条消息最大接收字节数, 64MB
+  ReconnectIntervalSec: 2                # 重连基础间隔（秒）
+  RecvTimeoutSec: 3                      # Recv 超时时间（秒）
+  BlockRecvTimeoutSec: 6                 # block接收超时时间（秒）
+  ConnectTimeoutSec: 12                  # gRPC连接超时时间（秒）
+  SendTimeoutSec: 3                      # gRPC发送超时时间（秒）
+
+# 价格服务配置
+PriceServiceConf:
+  Endpoint: "127.0.0.1:8080"
+  SyncIntervalS: 60
