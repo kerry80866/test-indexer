@@ -3,7 +3,6 @@ package grpc
 import (
 	"context"
 	"crypto/tls"
-	"dex-indexer-sol/internal/consts"
 	"dex-indexer-sol/internal/svc"
 	"errors"
 	"fmt"
@@ -131,7 +130,7 @@ func (m *GrpcStreamManager) mustConnect() {
 func buildSubscribeRequest() *pb.SubscribeRequest {
 	blocks := make(map[string]*pb.SubscribeRequestFilterBlocks)
 	blocks["blocks"] = &pb.SubscribeRequestFilterBlocks{
-		AccountInclude:      consts.GrpcAccountInclude,
+		AccountInclude:      []string{},
 		IncludeTransactions: boolPtr(true),  // ✅ 保留转 SOL、swap、transfer 等交易
 		IncludeAccounts:     boolPtr(false), // 不再收账户余额变化的单独 AccountUpdate（vote 省了）
 		IncludeEntries:      boolPtr(false), // IncludeEntries 是 Solana 底层的日志，普通业务基本没用。
