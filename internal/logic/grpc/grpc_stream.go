@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"google.golang.org/grpc/metadata"
-	"io"
 	"log"
 	"sync"
 	"time"
@@ -32,7 +31,6 @@ type GrpcStreamManager struct {
 	connCtx               context.Context               // 当前连接的 context
 	connCancel            context.CancelFunc            // 当前连接的 cancel 函数
 	recvTimeoutSec        int                           // Recv 超时时间（秒）
-	blockRecvTimeoutSec   int                           // block接收超时时间（秒）
 	sendTimeoutSec        int                           // gRPC发送超时时间（秒）
 }
 
@@ -76,7 +74,6 @@ func NewGrpcStreamManager(sc *svc.GrpcServiceContext, blockChan chan *pb.Subscri
 		streamPingIntervalSec: grpcConf.StreamPingIntervalSec,
 		blockChan:             blockChan,
 		recvTimeoutSec:        grpcConf.RecvTimeoutSec,
-		blockRecvTimeoutSec:   grpcConf.BlockRecvTimeoutSec,
 		sendTimeoutSec:        grpcConf.SendTimeoutSec,
 	}, nil
 }
@@ -191,27 +188,18 @@ func (m *GrpcStreamManager) connect() error {
 
 func (m *GrpcStreamManager) blockRecvLoop(ctx context.Context) {
 	last := time.Now()
-	blockTimeout := time.Duration(m.blockRecvTimeoutSec) * time.Second
+	recvTimeout := time.Duration(m.recvTimeoutSec) * time.Second
 	for {
 		select {
 		case <-ctx.Done():
 			return // 优雅退出
 		default:
-			update, err := m.stream.Recv() //recvWithTimeout[*pb.SubscribeUpdate](ctx, m.stream.Recv, time.Duration(m.recvTimeoutSec)*time.Second)
+			update, err := recvWithTimeout[*pb.SubscribeUpdate](ctx, m.stream.Recv, recvTimeout)
 			now := time.Now()
 			if err != nil {
-				if errors.Is(err, io.EOF) {
-					log.Printf("Stream closed by server (EOF), will reconnect")
-					m.reconnect()
-					return
-				}
-
 				log.Printf("Stream error: %v", err)
-				if m.reconnectIfBlockTimeout(last, blockTimeout) {
-					return
-				}
-				time.Sleep(100 * time.Millisecond)
-				continue
+				m.reconnect()
+				return
 			}
 
 			switch u := (*update).GetUpdateOneof().(type) {
@@ -232,7 +220,7 @@ func (m *GrpcStreamManager) blockRecvLoop(ctx context.Context) {
 			}
 		}
 
-		if m.reconnectIfBlockTimeout(last, blockTimeout) {
+		if m.reconnectIfBlockTimeout(last, recvTimeout) {
 			return
 		}
 	}
@@ -268,10 +256,14 @@ func recvWithTimeout[T any](ctx context.Context, recvFunc func() (T, error), tim
 
 	go func() {
 		resp, err := recvFunc()
-		done <- struct {
+		select {
+		case done <- struct {
 			resp T
 			err  error
-		}{resp, err}
+		}{resp, err}:
+		case <-timeoutCtx.Done():
+			// 防止 goroutine 因 send 阻塞导致泄漏
+		}
 	}()
 
 	select {

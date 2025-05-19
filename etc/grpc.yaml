@@ -10,8 +10,7 @@ Grpc:
   MaxCallSendMsgSize: 67108864           # 单条消息最大发送字节数, 64MB
   MaxCallRecvMsgSize: 1073741824         # 单条消息最大接收字节数, 64MB
   ReconnectIntervalSec: 2                # 重连基础间隔（秒）
-  RecvTimeoutSec: 3                      # Recv 超时时间（秒）
-  BlockRecvTimeoutSec: 6                 # block接收超时时间（秒）
+  RecvTimeoutSec: 5                      # Recv 超时时间（秒）
   ConnectTimeoutSec: 12                  # gRPC连接超时时间（秒）
   SendTimeoutSec: 3                      # gRPC发送超时时间（秒）
 

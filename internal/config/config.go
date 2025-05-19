@@ -24,7 +24,6 @@ type GrpcConfig struct {
 		MaxCallRecvMsgSize       int    // 单条消息最大接收字节数
 		ReconnectIntervalSec     int    // 重连基础间隔（秒）
 		RecvTimeoutSec           int    // Recv 超时时间（秒）
-		BlockRecvTimeoutSec      int    // block接收超时时间（秒）
 		ConnectTimeoutSec        int    // gRPC连接超时时间（秒）
 		SendTimeoutSec           int    // gRPC发送超时时间（秒）
 	}
