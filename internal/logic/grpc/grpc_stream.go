@@ -198,7 +198,7 @@ func (m *GrpcStreamManager) blockRecvLoop(ctx context.Context) {
 		case <-ctx.Done():
 			return // 优雅退出
 		default:
-			update, err := recvWithTimeout[*pb.SubscribeUpdate](ctx, m.stream.Recv, time.Duration(m.recvTimeoutSec)*time.Second)
+			update, err := m.stream.Recv() //recvWithTimeout[*pb.SubscribeUpdate](ctx, m.stream.Recv, time.Duration(m.recvTimeoutSec)*time.Second)
 			now := time.Now()
 			if err != nil {
 				if errors.Is(err, io.EOF) {
