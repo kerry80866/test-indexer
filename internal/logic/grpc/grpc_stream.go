@@ -353,8 +353,8 @@ func (m *GrpcStreamManager) pingLoop(ctx context.Context) {
 			}
 			err := sendWithTimeout(ctx, m.stream.Send, pingReq, time.Duration(m.sendTimeoutSec)*time.Second)
 			if err != nil {
-				log.Printf("Ping failed: %v", err)
-				return
+				log.Printf("Ping failed (non-critical): %v", err)
+				continue // ✅ 安全！由 recvLoop 兜底 reconnect
 			}
 		}
 	}
