@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 	"crypto/tls"
+	"dex-indexer-sol/internal/consts"
 	"dex-indexer-sol/internal/svc"
 	"errors"
 	"fmt"
@@ -127,7 +128,7 @@ func (m *GrpcStreamManager) mustConnect() {
 func buildSubscribeRequest() *pb.SubscribeRequest {
 	blocks := make(map[string]*pb.SubscribeRequestFilterBlocks)
 	blocks["blocks"] = &pb.SubscribeRequestFilterBlocks{
-		AccountInclude:      []string{},
+		AccountInclude:      consts.GrpcAccountInclude,
 		IncludeTransactions: boolPtr(true),  // ✅ 保留转 SOL、swap、transfer 等交易
 		IncludeAccounts:     boolPtr(false), // 不再收账户余额变化的单独 AccountUpdate（vote 省了）
 		IncludeEntries:      boolPtr(false), // IncludeEntries 是 Solana 底层的日志，普通业务基本没用。
@@ -218,60 +219,123 @@ func (m *GrpcStreamManager) blockRecvLoop(ctx context.Context) {
 				// 无论是否写入成功，都要更新 last
 				last = now
 			}
-		}
 
-		if m.reconnectIfBlockTimeout(last, recvTimeout) {
-			return
+			if time.Since(last) > recvTimeout {
+				log.Printf("%v未收到block，触发重连", recvTimeout)
+				m.reconnect()
+				return
+			}
 		}
 	}
 }
 
-// 带超时的 Send
+// sendWithTimeout 向 sendFunc 发送带参数的请求，并在指定超时时间内等待返回。
+// 使用 goroutine 执行 sendFunc，避免其阻塞主线程。
+// 支持捕获 panic、自动取消、主 context 的提前终止。
 func sendWithTimeout[T any](ctx context.Context, sendFunc func(T) error, req T, timeout time.Duration) error {
+	// 创建子 context 以控制超时时间
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
+	// 创建结果通道，用于异步接收 sendFunc 的结果
 	done := make(chan error, 1)
+
+	// 在 goroutine 中执行 sendFunc，以避免其阻塞主线程
 	go func() {
-		done <- sendFunc(req)
-	}()
+		defer func() {
+			if r := recover(); r != nil {
+				// 捕获 sendFunc 内部 panic 并写入 error 结果
+				select {
+				case done <- fmt.Errorf("sendFunc panic: %v", r):
+				case <-timeoutCtx.Done():
+					// 如果超时已发生，不写入，防止阻塞
+				}
+			}
+		}()
 
-	select {
-	case <-timeoutCtx.Done():
-		return timeoutCtx.Err()
-	case err := <-done:
-		return err
-	}
-}
+		// 调用 sendFunc
+		err := sendFunc(req)
 
-// 带超时的 Recv
-func recvWithTimeout[T any](ctx context.Context, recvFunc func() (T, error), timeout time.Duration) (T, error) {
-	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-
-	done := make(chan struct {
-		resp T
-		err  error
-	}, 1)
-
-	go func() {
-		resp, err := recvFunc()
+		// 将返回结果写入 done（或放弃写入以避免阻塞）
 		select {
-		case done <- struct {
-			resp T
-			err  error
-		}{resp, err}:
+		case done <- err:
 		case <-timeoutCtx.Done():
-			// 防止 goroutine 因 send 阻塞导致泄漏
 		}
 	}()
 
+	// 等待 sendFunc 结果、主 context 被取消
 	select {
+	case err := <-done:
+		return err // 正常返回或 panic 后的 error
+	case <-ctx.Done():
+		return ctx.Err() // 外部主动取消
+	}
+}
+
+// result 是泛型结构体，用于包装 recvWithTimeout 的返回值和错误
+type result[T any] struct {
+	resp T     // 实际接收到的数据
+	err  error // 可能的错误（包括 recvFunc 返回的 error 或 panic）
+}
+
+// recvWithTimeout 封装对 recvFunc 的调用，支持以下特性：
+// - 指定超时时间（timeout）控制函数最大阻塞时间；
+// - 可恢复 panic，防止函数内部崩溃影响主逻辑；
+// - 响应主调用方 ctx 的取消信号（如服务 shutdown、手动取消）；
+//
+// 常用于 gRPC 等场景下的 Recv 操作，防止 Recv 永久阻塞。
+func recvWithTimeout[T any](
+	ctx context.Context, // 上层业务的控制 context（如服务级别 context）
+	recvFunc func() (T, error), // 实际执行的阻塞性函数（如 stream.Recv()）
+	timeout time.Duration, // 超时时间阈值
+) (T, error) {
+	// timeoutCtx 是基于 ctx 创建的子 context，用于实现本次调用的超时控制
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel() // 确保超时资源被释放
+
+	// 创建带缓冲的通道，接收异步 goroutine 返回的结果
+	done := make(chan result[T], 1)
+
+	// 启动 goroutine 来调用 recvFunc，避免其阻塞主线程
+	go func() {
+		// 使用 recover 捕获 recvFunc 内部的 panic
+		defer func() {
+			if r := recover(); r != nil {
+				var zero T // 零值用于 panic 时返回
+				select {
+				case done <- result[T]{zero, fmt.Errorf("recvFunc panic: %v", r)}:
+				case <-timeoutCtx.Done():
+					// 如果已经超时，放弃写入，避免阻塞
+				}
+			}
+		}()
+
+		// 实际调用 recvFunc（如 stream.Recv()）
+		resp, err := recvFunc()
+
+		// 将结果写入通道；如果已超时则丢弃
+		select {
+		case done <- result[T]{resp, err}:
+		case <-timeoutCtx.Done():
+			// 超时后不写入，避免死锁
+		}
+	}()
+
+	// 主逻辑等待三种退出信号之一：
+	select {
+	case result := <-done:
+		// 正常接收到结果或 panic 错误
+		return result.resp, result.err
+
 	case <-timeoutCtx.Done():
+		// 本次调用超时（注意：ctx.Done() 也会触发）
 		var zero T
 		return zero, timeoutCtx.Err()
-	case result := <-done:
-		return result.resp, result.err
+
+	case <-ctx.Done():
+		// 主业务主动取消（如 stop/reconnect）
+		var zero T
+		return zero, ctx.Err()
 	}
 }
 
@@ -290,19 +354,10 @@ func (m *GrpcStreamManager) pingLoop(ctx context.Context) {
 			err := sendWithTimeout(ctx, m.stream.Send, pingReq, time.Duration(m.sendTimeoutSec)*time.Second)
 			if err != nil {
 				log.Printf("Ping failed: %v", err)
-				// 这里只记录日志，不触发重连
+				return
 			}
 		}
 	}
-}
-
-func (m *GrpcStreamManager) reconnectIfBlockTimeout(last time.Time, timeout time.Duration) bool {
-	if time.Since(last) > timeout {
-		log.Printf("%v未收到block，触发重连", timeout)
-		m.reconnect()
-		return true
-	}
-	return false
 }
 
 func (m *GrpcStreamManager) reconnect() {
@@ -323,58 +378,3 @@ func (m *GrpcStreamManager) reconnect() {
 func boolPtr(b bool) *bool {
 	return &b
 }
-
-// main 函数已注释，改为提供 New、Start、Stop 接口
-/*
-func main() {
-	ctx := context.Background()
-
-	// Create manager with data handler and x-token
-	manager, err := NewGrpcStreamManager(
-		"your-grpc-url:2053",
-		"your-x-token",
-		handleAccountUpdate,
-		10,
-		1<<30,
-		1<<30,
-		64*1024*1024,
-		64*1024*1024,
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer manager.Close()
-
-	// Create subscription request for blocks and slots
-	blocks := make(map[string]*pb.SubscribeRequestFilterBlocks)
-	blocks["blocks"] = &pb.SubscribeRequestFilterBlocks{
-		AccountInclude:      []string{},
-		IncludeTransactions: boolPtr(true),
-		IncludeAccounts:     boolPtr(true),
-		IncludeEntries:      boolPtr(false),
-	}
-
-	slots := make(map[string]*pb.SubscribeRequestFilterSlots)
-	slots["slots"] = &pb.SubscribeRequestFilterSlots{
-		FilterByCommitment: boolPtr(true),
-	}
-
-	commitment := pb.CommitmentLevel_CONFIRMED
-	req := &pb.SubscribeRequest{
-		Blocks:     blocks,
-		Slots:      slots,
-		Commitment: &commitment,
-	}
-
-	log.Println("Starting block and slot monitoring...")
-	log.Println("Monitoring blocks for Token Program, System Program, and Wrapped SOL activities...")
-
-	// Connect and handle updates
-	if err := manager.Connect(ctx, req); err != nil {
-		log.Fatal(err)
-	}
-
-	// Keep the main goroutine running
-	select {}
-}
-*/
