@@ -206,10 +206,12 @@ func (m *GrpcStreamManager) blockRecvLoop(ctx context.Context) {
 					m.reconnect()
 					return
 				}
+
 				log.Printf("Stream error: %v", err)
 				if m.reconnectIfBlockTimeout(last, blockTimeout) {
 					return
 				}
+				time.Sleep(100 * time.Millisecond)
 				continue
 			}
 
