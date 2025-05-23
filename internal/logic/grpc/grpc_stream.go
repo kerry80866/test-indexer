@@ -133,7 +133,7 @@ func buildSubscribeRequest() *pb.SubscribeRequest {
 		IncludeAccounts:     boolPtr(false), // 不再收账户余额变化的单独 AccountUpdate（vote 省了）
 		IncludeEntries:      boolPtr(false), // IncludeEntries 是 Solana 底层的日志，普通业务基本没用。
 	}
-	commitment := pb.CommitmentLevel_CONFIRMED
+	commitment := pb.CommitmentLevel_PROCESSED
 	return &pb.SubscribeRequest{
 		Blocks:     blocks,
 		Commitment: &commitment,
