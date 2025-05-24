@@ -208,15 +208,15 @@ func (m *GrpcStreamManager) blockRecvLoop(ctx context.Context) {
 				interval := now.UnixMilli() - u.Block.BlockTime.Timestamp*1000 // 算出你收到这个区块时的延迟（ms）
 				log.Printf("received block at slot %v, latency to blockTime: %v ms", u.Block.Slot, interval)
 
-				//select {
-				//case m.blockChan <- u.Block:
-				//	// 成功写入，无事发生
-				//default:
-				//	log.Printf("blockChan is full, discard block at slot %v", u.Block.Slot)
-				//}
+				select {
+				case m.blockChan <- u.Block:
+					// 成功写入，无事发生
+				default:
+					//log.Printf("blockChan is full, discard block at slot %v", u.Block.Slot)
+				}
 				//interval1 := now.Sub(last)
 				//log.Printf("received block at slot %v, interval since last block: %v ms", u.Block.Slot, interval1.Milliseconds())
-				// 无论是否写入成功，都要更新 last
+				//无论是否写入成功，都要更新 last
 				last = now
 			}
 

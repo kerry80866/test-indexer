@@ -7,12 +7,23 @@ import (
 
 type Pubkey [32]byte
 
+var EmptyPubkey Pubkey
+
 func (p Pubkey) String() string {
 	return base58.Encode(p[:])
 }
 
 func (p Pubkey) Equals(other Pubkey) bool {
 	return p == other
+}
+
+func PubkeyFromBytes(b []byte) (Pubkey, error) {
+	if len(b) != 32 {
+		return Pubkey{}, fmt.Errorf("invalid pubkey: length = %d, want 32", len(b))
+	}
+	var pk Pubkey
+	copy(pk[:], b)
+	return pk, nil
 }
 
 // TryPubkeyFromBase58 解析 base58 字符串为 Pubkey，失败时返回 error（用于不信任输入路径）

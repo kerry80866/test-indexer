@@ -7,8 +7,8 @@ Grpc:
   KeepalivePingTimeoutSec: 4             # gRPC底层keepalive超时（秒）
   InitialWindowSize: 1073741824          # 单个流窗口大小（字节）, 1GB
   InitialConnWindowSize: 1073741824      # 整个连接窗口大小（字节）, 1GB
-  MaxCallSendMsgSize: 67108864           # 单条消息最大发送字节数, 64MB
-  MaxCallRecvMsgSize: 1073741824         # 单条消息最大接收字节数, 64MB
+  MaxCallSendMsgSize: 33554432           # 单条消息最大发送字节数, 32MB
+  MaxCallRecvMsgSize: 134217728          # 单条消息最大接收字节数, 128MB
   ReconnectIntervalSec: 2                # 重连基础间隔（秒）
   RecvTimeoutSec: 5                      # Recv 超时时间（秒）
   ConnectTimeoutSec: 12                  # gRPC连接超时时间（秒）
@@ -18,3 +18,28 @@ Grpc:
 PriceServiceConf:
   Endpoint: "127.0.0.1:8080"
   SyncIntervalS: 60
+
+# Kafka 生产者配置
+KafkaProducerConf:
+  Brokers: "127.0.0.1:9092"              # Kafka 服务器地址，多个地址用逗号分隔
+  BatchSize: 24000                       # 批处理大小（字节）
+  LingerMs: 5                            # 批处理延迟（毫秒）
+  NumPartitions: 3                       # 分区数量
+  Topics:
+    Balance: "dex-balance"               # 余额变更事件主题
+    Event: "dex-event-test"                   # 普通事件主题
+
+ProgressConf:
+  # 判定是否为“近期 block”的时间阈值（秒）
+  # 小于该时间的 block 将直接处理（跳过 Redis & DB 判重）
+  # 通常设为 60 秒，建议不低于 30 秒，避免数据过于新但未入 Redis
+  recent_threshold_sec: 60
+
+# Redis 配置（用于 slot 判重状态存储）
+RedisAddr: "127.0.0.1:6379"              # Redis 服务地址（含端口）
+
+# PostgreSQL 配置（用于 slot 落库持久化）
+# PostgreSQL 连接串，包含用户名、密码、数据库、地址、端口
+# 可用于从 pg 客户端验证连接是否正常
+PostgresDSN: "postgres://user:pass@localhost:5432/mydb?sslmode=disable"
+

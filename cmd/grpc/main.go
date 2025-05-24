@@ -1,7 +1,10 @@
 package main
 
 import (
+	"dex-indexer-sol/internal/cache"
 	"dex-indexer-sol/internal/config"
+	"dex-indexer-sol/internal/consts"
+	"dex-indexer-sol/internal/logic/eventparser"
 	"dex-indexer-sol/internal/logic/grpc"
 	"dex-indexer-sol/internal/svc"
 	"flag"
@@ -9,6 +12,7 @@ import (
 	"os/signal"
 	"runtime/debug"
 	"syscall"
+	"time"
 
 	pb "github.com/rpcpool/yellowstone-grpc/examples/golang/proto"
 	"github.com/zeromicro/go-zero/core/conf"
@@ -32,8 +36,22 @@ func main() {
 
 	serviceContext := svc.NewGrpcServiceContext(c)
 
+	// 初始化事件解析器模块：注册各协议的指令解析handler
+	eventparser.Init()
+
 	// 初始化价格同步服务
 	//priceSyncService := service.NewPriceSyncService(&c.PriceServiceConf, serviceContext.PriceCache)
+	serviceContext.PriceCache.UpdateFrom(map[string][]cache.TokenPricePoint{
+		consts.WSOLMintStr: {
+			{PriceUsd: 180.0, Timestamp: time.Now().Unix()},
+		},
+		consts.USDCMintStr: {
+			{PriceUsd: 1.0, Timestamp: time.Now().Unix()},
+		},
+		consts.USDTMintStr: {
+			{PriceUsd: 1.0, Timestamp: time.Now().Unix()},
+		},
+	})
 
 	sg := zerosvc.NewServiceGroup()
 	//sg.Add(priceSyncService)
@@ -46,6 +64,9 @@ func main() {
 		panic(err)
 	}
 	sg.Add(grpcService)
+
+	blockProcessor := grpc.NewBlockProcessor(serviceContext, blockChan)
+	sg.Add(blockProcessor)
 
 	logx.Infof("Starting grpc stream service")
 

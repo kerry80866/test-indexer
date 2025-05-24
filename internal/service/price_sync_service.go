@@ -5,11 +5,11 @@ import (
 	"dex-indexer-sol/internal/config"
 	"dex-indexer-sol/internal/types"
 	"dex-indexer-sol/internal/utils"
+	"dex-indexer-sol/pb"
 	"fmt"
 	"log"
 	"time"
 
-	"dex-indexer-sol/api/price"
 	"dex-indexer-sol/internal/cache"
 	"dex-indexer-sol/internal/consts"
 
@@ -19,7 +19,7 @@ import (
 
 type PriceSyncService struct {
 	priceCache *cache.PriceCache
-	client     price.PriceServiceClient
+	client     pb.PriceServiceClient
 	tokens     []string // 定时拉取价格的币种
 	interval   time.Duration
 	stopChan   chan struct{}
@@ -36,14 +36,14 @@ func NewPriceSyncService(config *config.PriceServiceConfig, priceCache *cache.Pr
 	}
 
 	// 创建 gRPC 客户端
-	client := price.NewPriceServiceClient(conn)
+	client := pb.NewPriceServiceClient(conn)
 
 	// 创建服务实例
 	p := &PriceSyncService{
 		priceCache: priceCache,
 		client:     client,
 		interval:   time.Duration(config.SyncIntervalS) * time.Second,
-		tokens:     utils.QuoteTokenAddresses,
+		tokens:     utils.USDQuoteMintStrs,
 		stopChan:   make(chan struct{}),
 		conn:       conn,
 	}
@@ -110,8 +110,8 @@ func (ps *PriceSyncService) fetchPriceHistory() (map[string][]cache.TokenPricePo
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	resp, err := ps.client.GetPriceHistory(ctx, &price.GetPriceHistoryRequest{
-		ChainId:        consts.ChainIDSolana,
+	resp, err := ps.client.GetPriceHistory(ctx, &pb.GetPriceHistoryRequest{
+		ChainId:        int32(consts.ChainIDSolana),
 		TokenAddresses: ps.tokens,
 		FromTimestamp:  time.Now().Add(-ps.interval).Unix(),
 	})

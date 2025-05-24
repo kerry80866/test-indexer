@@ -3,22 +3,66 @@ package svc
 import (
 	"dex-indexer-sol/internal/cache"
 	"dex-indexer-sol/internal/config"
+	"dex-indexer-sol/internal/logic/progress"
 	"log"
+
+	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 )
 
 // GrpcServiceContext 包含GRPC服务资源
 type GrpcServiceContext struct {
-	Config     config.GrpcConfig
-	PriceCache *cache.PriceCache
+	Config          config.GrpcConfig
+	PriceCache      *cache.PriceCache
+	Producer        *kafka.Producer
+	ProgressManager *progress.ProgressManager
 }
 
-// NewGrpcServiceContext 创建一个新的GRPC服务上下文
+// NewGrpcServiceContext 创建一个新的 GRPC 服务上下文
 func NewGrpcServiceContext(c config.GrpcConfig) *GrpcServiceContext {
-	ctx := &GrpcServiceContext{
-		Config:     c,
-		PriceCache: cache.NewPriceCache(),
+	// 1. 初始化 Kafka 生产者
+	//producer, err := mq.NewKafkaProducer(c.KafkaProducerConf)
+	//if err != nil {
+	//	log.Fatalf("❌ Kafka producer 初始化失败: %v", err)
+	//}
+
+	//// 2. 初始化 Redis 客户端（用于 slot 状态缓存）
+	//rdb := redis.NewClient(&redis.Options{
+	//	Addr: c.RedisAddr, // eg: "127.0.0.1:6379"
+	//	// 可按需添加密码/数据库等参数
+	//})
+	//
+	//// 3. 初始化 PostgreSQL 数据库连接（用于 slot 落库）
+	//db, err := sql.Open("postgres", c.PostgresDSN)
+	//if err != nil {
+	//	log.Fatalf("❌ PostgreSQL 连接失败: %v", err)
+	//}
+
+	// 4. 判定“近期 block”的时间阈值（默认 60 秒）
+	threshold := c.ProgressConf.RecentThresholdSec
+	if threshold <= 0 {
+		threshold = 60
 	}
 
-	log.Println("GRPC服务上下文初始化完成")
+	// 5. 初始化进度管理器（Redis + DB + 缓冲）
+	//redisStore := progress.NewRedisProgressStore(rdb)
+	//dbStore := progress.NewDBProgressStore(db)
+	pm := progress.NewProgressManager(nil, nil, threshold)
+
+	// 6. 构造上下文
+	ctx := &GrpcServiceContext{
+		Config:          c,
+		PriceCache:      cache.NewPriceCache(),
+		Producer:        nil,
+		ProgressManager: pm,
+	}
+
+	log.Println("✅ GRPC 服务上下文初始化完成")
 	return ctx
+}
+
+// Close 关闭服务上下文中的资源
+func (ctx *GrpcServiceContext) Close() {
+	if ctx.Producer != nil {
+		ctx.Producer.Close()
+	}
 }
