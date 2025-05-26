@@ -7,8 +7,6 @@ import (
 
 type Pubkey [32]byte
 
-var EmptyPubkey Pubkey
-
 func (p Pubkey) String() string {
 	return base58.Encode(p[:])
 }

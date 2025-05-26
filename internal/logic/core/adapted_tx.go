@@ -32,6 +32,7 @@ type TokenBalance struct {
 	TokenAccount types.Pubkey
 	Token        types.Pubkey
 	Owner        types.Pubkey
+	TxIndex      uint32 // 新增字段：记录最后生效 tx 的索引
 }
 
 // TokenDecimals 表示一个 mint → decimals 的映射项，来源于解析阶段。

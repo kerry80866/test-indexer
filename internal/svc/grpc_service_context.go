@@ -4,6 +4,7 @@ import (
 	"dex-indexer-sol/internal/cache"
 	"dex-indexer-sol/internal/config"
 	"dex-indexer-sol/internal/logic/progress"
+	"dex-indexer-sol/internal/mq"
 	"log"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
@@ -20,10 +21,10 @@ type GrpcServiceContext struct {
 // NewGrpcServiceContext 创建一个新的 GRPC 服务上下文
 func NewGrpcServiceContext(c config.GrpcConfig) *GrpcServiceContext {
 	// 1. 初始化 Kafka 生产者
-	//producer, err := mq.NewKafkaProducer(c.KafkaProducerConf)
-	//if err != nil {
-	//	log.Fatalf("❌ Kafka producer 初始化失败: %v", err)
-	//}
+	producer, err := mq.NewKafkaProducer(c.KafkaProducerConf)
+	if err != nil {
+		log.Fatalf("❌ Kafka producer 初始化失败: %v", err)
+	}
 
 	//// 2. 初始化 Redis 客户端（用于 slot 状态缓存）
 	//rdb := redis.NewClient(&redis.Options{
@@ -46,14 +47,14 @@ func NewGrpcServiceContext(c config.GrpcConfig) *GrpcServiceContext {
 	// 5. 初始化进度管理器（Redis + DB + 缓冲）
 	//redisStore := progress.NewRedisProgressStore(rdb)
 	//dbStore := progress.NewDBProgressStore(db)
-	pm := progress.NewProgressManager(nil, nil, threshold)
+	//pm := progress.NewProgressManager(nil, nil, threshold)
 
 	// 6. 构造上下文
 	ctx := &GrpcServiceContext{
 		Config:          c,
 		PriceCache:      cache.NewPriceCache(),
-		Producer:        nil,
-		ProgressManager: pm,
+		Producer:        producer,
+		ProgressManager: nil,
 	}
 
 	log.Println("✅ GRPC 服务上下文初始化完成")

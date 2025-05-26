@@ -55,6 +55,7 @@ func tryFillBalanceFromInitAccount(ctx *common.ParserContext, ix *core.AdaptedIn
 				Token:        mint,
 				Owner:        owner,
 				Decimals:     decimals,
+				TxIndex:      ctx.TxIndex,
 			}
 		} else {
 			logx.Errorf(

@@ -39,10 +39,10 @@ func extractTokenTransferEvent(
 	}
 
 	return &core.Event{
-		EventId:   event.EventIndex,
-		EventType: uint32(event.Type),
-		Key:       event.Token,
-		Event: &pb.Event{
+		ID:        event.EventIndex,   // 本事件唯一 ID（建议保持 ID 命名）
+		EventType: uint32(event.Type), // EventType = TRANSFER
+		Key:       event.Token,        // 分区 Key，可用 Token / From / Owner
+		Event: &pb.Event{ // protobuf 封装
 			Event: &pb.Event_Transfer{
 				Transfer: &event,
 			},

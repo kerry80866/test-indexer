@@ -28,7 +28,7 @@ func BuildTradeEvent(
 	}
 
 	return &core.Event{
-		EventId:   trade.EventIndex,
+		ID:        trade.EventIndex,
 		EventType: uint32(trade.Type),
 		Key:       trade.Token, // base token 分区
 		Event: &pb.Event{

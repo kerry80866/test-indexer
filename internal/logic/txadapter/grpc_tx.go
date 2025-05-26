@@ -98,6 +98,7 @@ func buildAdaptedBalances(
 				Owner:        ownerResolver.resolve(post.Owner),
 				PostBalance:  utils.ParseUint64(post.UiTokenAmount.Amount),
 				Decimals:     decimals,
+				TxIndex:      uint32(tx.Index),
 				// PreBalance 默认为 0，稍后补充（如有）
 			}
 		}
@@ -120,6 +121,7 @@ func buildAdaptedBalances(
 					Owner:        ownerResolver.resolve(pre.Owner),
 					PreBalance:   utils.ParseUint64(pre.UiTokenAmount.Amount),
 					Decimals:     decimals,
+					TxIndex:      uint32(tx.Index),
 					// PostBalance 默认为 0，表示账户被销毁或清空
 				}
 			}

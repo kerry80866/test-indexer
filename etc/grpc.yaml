@@ -1,7 +1,7 @@
 # GRPC特有配置
 Grpc:
   Endpoint:            # gRPC 服务端地址
-  XToken:                    # 认证用的 x-token
+  XToken:                   # 认证用的 x-token
   StreamPingIntervalSec: 20              # Stream心跳包发送间隔（秒）
   KeepalivePingIntervalSec: 12           # gRPC底层keepalive间隔（秒）
   KeepalivePingTimeoutSec: 4             # gRPC底层keepalive超时（秒）
@@ -19,21 +19,27 @@ PriceServiceConf:
   Endpoint: "127.0.0.1:8080"
   SyncIntervalS: 60
 
+TimeConf:
+  SlotDispatchTimeoutMs: 2000       # 控制整个 slot dispatch 生命周期：发事件 + Redis + DB（毫秒）
+  EventSendTimeoutMs: 1000          # 控制发送 events 消息并等待 Kafka ack 的超时时间（毫秒）
+
 # Kafka 生产者配置
 KafkaProducerConf:
-  Brokers: "127.0.0.1:9092"              # Kafka 服务器地址，多个地址用逗号分隔
+  Brokers: "172.19.3.15:9092"              # Kafka 服务器地址，多个地址用逗号分隔
   BatchSize: 32768                       # 批处理大小（32KB）
   LingerMs: 5                            # 批处理延迟（毫秒）
-  NumPartitions: 3                       # 分区数量
   Topics:
-    Balance: "dex-balance"               # 余额变更事件主题
-    Event: "dex-event-test"                   # 普通事件主题
+    Balance: "dex_indexer_sol_balance"   # balance 事件的 topic 名称
+    Event:   "dex_indexer_sol_event"     # 普通事件（如 swap/transfer）的 topic 名称
+  Partitions:
+    Balance: 4                           # balance topic 的分区数
+    Event:   3                           # event topic 的分区数
 
 ProgressConf:
   # 判定是否为“近期 block”的时间阈值（秒）
   # 小于该时间的 block 将直接处理（跳过 Redis & DB 判重）
   # 通常设为 60 秒，建议不低于 30 秒，避免数据过于新但未入 Redis
-  recent_threshold_sec: 60
+  RecentThresholdSec: 60
 
 # Redis 配置（用于 slot 判重状态存储）
 RedisAddr: "127.0.0.1:6379"              # Redis 服务地址（含端口）

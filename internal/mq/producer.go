@@ -1,10 +1,15 @@
 package mq
 
 import (
+	"context"
 	"dex-indexer-sol/internal/config"
+	"dex-indexer-sol/internal/utils"
+	"fmt"
+	"github.com/zeromicro/go-zero/core/logx"
+	"os"
+	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
-	"github.com/zeromicro/go-zero/core/logx"
 )
 
 const (
@@ -14,6 +19,69 @@ const (
 
 // NewKafkaProducer 创建 Kafka 生产者
 func NewKafkaProducer(cfg config.KafkaProducerConfig) (*kafka.Producer, error) {
+	// 创建管理员客户端来管理 topic
+	adminClient, err := kafka.NewAdminClient(&kafka.ConfigMap{
+		"bootstrap.servers": cfg.Brokers,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create admin client: %w", err)
+	}
+	defer adminClient.Close()
+
+	// 检查 topic 是否存在
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	meta, err := adminClient.GetMetadata(nil, true, 10000)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get metadata: %w", err)
+	}
+	brokerCount := len(meta.Brokers)
+
+	replicationFactor := 1
+	if brokerCount > 1 {
+		replicationFactor = 2
+	}
+	logx.Infof("Kafka broker count = %d, using replication factor = %d", brokerCount, replicationFactor)
+
+	// 检查需要创建的 topic
+	var topicsToCreate []kafka.TopicSpecification
+	existingTopics := make(map[string]bool)
+	for _, topic := range meta.Topics {
+		existingTopics[topic.Topic] = true
+	}
+
+	// 如果 topic 不存在，则添加到创建列表
+	if !existingTopics[cfg.Topics.Balance] {
+		topicsToCreate = append(topicsToCreate, kafka.TopicSpecification{
+			Topic:             cfg.Topics.Balance,
+			NumPartitions:     cfg.Partitions.Balance,
+			ReplicationFactor: replicationFactor,
+		})
+	}
+	if !existingTopics[cfg.Topics.Event] {
+		topicsToCreate = append(topicsToCreate, kafka.TopicSpecification{
+			Topic:             cfg.Topics.Event,
+			NumPartitions:     cfg.Partitions.Event,
+			ReplicationFactor: replicationFactor,
+		})
+	}
+
+	// 如果有需要创建的 topic，则创建
+	if len(topicsToCreate) > 0 {
+		results, err := adminClient.CreateTopics(ctx, topicsToCreate)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create topics: %w", err)
+		}
+
+		// 检查创建结果
+		for _, result := range results {
+			if result.Error.Code() != kafka.ErrNoError {
+				return nil, fmt.Errorf("failed to create topic %s: %w", result.Topic, result.Error)
+			}
+		}
+	}
+
 	batchSize := cfg.BatchSize
 	if batchSize <= 0 {
 		batchSize = defaultBatchSize
@@ -23,10 +91,11 @@ func NewKafkaProducer(cfg config.KafkaProducerConfig) (*kafka.Producer, error) {
 		lingerMs = defaultLingerMs
 	}
 
-	conf := &kafka.ConfigMap{
+	// 创建生产者
+	producer, err := kafka.NewProducer(&kafka.ConfigMap{
 		// 基础连接
 		"bootstrap.servers": cfg.Brokers,
-		"client.id":         "solana-grpc-indexer",
+		"client.id":         fmt.Sprintf("solana-grpc-indexer-%s-%d", utils.GetLocalIP(), os.Getpid()),
 
 		// PLAINTEXT: 不加密(明文传输), 不认证
 		// SSL: 只加密，不认证
@@ -63,14 +132,10 @@ func NewKafkaProducer(cfg config.KafkaProducerConfig) (*kafka.Producer, error) {
 
 		// 消息大小
 		"message.max.bytes": 2 * 1024 * 1024, // 2MB
-	}
-
-	logx.Infof("creating Kafka producer with config: batchSize=%d, lingerMs=%d, brokers=%s", batchSize, lingerMs, cfg.Brokers)
-
-	producer, err := kafka.NewProducer(conf)
+	})
 	if err != nil {
-		logx.Errorf("failed to create Kafka producer: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to create producer: %w", err)
 	}
+
 	return producer, nil
 }

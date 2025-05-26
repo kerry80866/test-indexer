@@ -14,20 +14,11 @@ const (
 type EventType int
 
 const (
-	EventUnknown EventType = 0
-	EventTrade   EventType = 1
-	EventBalance EventType = 2
+	EventSlot EventType = 0
 )
 
 func (et EventType) TableName() string {
-	switch et {
-	case EventTrade:
-		return "progress_trade"
-	case EventBalance:
-		return "progress_balance"
-	default:
-		return "progress_unknown"
-	}
+	return "progress_slot"
 }
 
 // Source 表示事件来源模块（grpc、rpc）

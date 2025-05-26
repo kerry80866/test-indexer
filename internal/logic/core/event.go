@@ -1,12 +1,22 @@
 package core
 
-import "dex-indexer-sol/pb"
+import (
+	"dex-indexer-sol/internal/types"
+	"dex-indexer-sol/pb"
+)
+
+// ParsedTxResult 表示某笔交易解析后的中间结构，包含余额和事件
+type ParsedTxResult struct {
+	TxIndex  int                            // 当前交易在 block 中的序号
+	Balances map[types.Pubkey]*TokenBalance // TokenAccount → 余额变动信息
+	Events   []*Event                       // 已解析出的事件（Trade / Transfer / Balance 等）
+}
 
 type Event struct {
-	EventId   uint32    // 构造的唯一事件 ID，基于 txIndex、ixIndex、innerIndex
-	EventType uint32    // 自定义事件类型（枚举）
-	Key       []byte    // Kafka分区key：余额事件是owner，其它类型是base token
-	Event     *pb.Event // 实际事件的 proto 内容
+	ID        uint32    // slot 内唯一事件 ID（txIndex、ixIndex、innerIndex 组合）
+	EventType uint32    // 枚举型，表示事件类别（Trade/Transfer/Balance）
+	Key       []byte    // Kafka 分区 key，建议为 owner 或 base token
+	Event     *pb.Event // Protobuf 封装的实际事件内容（包含 Transfer、Trade 等变体）
 }
 
 // BuildEventID 构造事件唯一标识 ID（uint32），由 txIndex、ixIndex、innerIndex 组合而成：
