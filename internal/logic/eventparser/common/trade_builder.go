@@ -5,10 +5,9 @@ import (
 	"dex-indexer-sol/internal/types"
 	"dex-indexer-sol/internal/utils"
 	"dex-indexer-sol/pb"
-	"github.com/zeromicro/go-zero/core/logx"
 )
 
-// BuildTradeEvent 根据转账方向（base / quote）构建标准的交易事件 Event
+// BuildTradeEvent 根据 token 转账方向构建 BUY 或 SELL 类型的交易事件。
 func BuildTradeEvent(
 	ctx *ParserContext,
 	ix *core.AdaptedInstruction,
@@ -18,131 +17,106 @@ func BuildTradeEvent(
 	quote types.Pubkey,
 	dex int,
 ) *core.Event {
-	var event *pb.TradeEvent
+	var trade *pb.TradeEvent
 
 	if userToPool.Token == quote {
-		// 用户支付 quote，获得 base，对应 BUY 类型
-		event = buildBuyEvent(ctx, userToPool, poolToUser, quote, pairAddress, uint32(dex))
+		// 用户支付 quote，获得 base → BUY
+		trade = buildBuyEvent(ctx, ix, userToPool, poolToUser, quote, pairAddress, uint32(dex))
 	} else {
-		// 用户支付 base，获得 quote，对应 SELL 类型
-		event = buildSellEvent(ctx, userToPool, poolToUser, quote, pairAddress, uint32(dex))
-	}
-
-	ctx.BaseEvent.EventIndex = core.BuildEventID(ctx.TxIndex, ix.IxIndex, ix.InnerIndex)
-	data, err := utils.EncodeEvent(uint32(event.BaseEvent.Type), event)
-	if err != nil {
-		logx.Errorf("encode TradeEvent failed: %v", err)
-		return nil
+		// 用户支付 base，获得 quote → SELL
+		trade = buildSellEvent(ctx, ix, userToPool, poolToUser, quote, pairAddress, uint32(dex))
 	}
 
 	return &core.Event{
-		Tx:        ctx.Tx,
-		EventId:   event.BaseEvent.EventIndex,
-		EventType: uint32(event.BaseEvent.Type),
-		Token:     event.Token,
-		Data:      data,
+		EventId:   trade.EventIndex,
+		EventType: uint32(trade.Type),
+		Key:       trade.Token, // base token 分区
+		Event: &pb.Event{
+			Event: &pb.Event_Trade{
+				Trade: trade,
+			},
+		},
 	}
 }
 
-// buildBuyEvent 构建 Raydium Swap 中的 BUY 类型交易事件：
-// - 用户支付 quote token，获得 base token；
-// - userToPool 表示用户支付的 quote 转账；
-// - poolToUser 表示池子发给用户的 base 转账；
-// - quote 为确定的 quote token mint；
-// - accountOffset 为账户偏移（支持 17 / 18 账户结构）。
+// buildBuyEvent 构造 BUY 类型交易事件（支付 quote，获得 base）。
 func buildBuyEvent(
 	ctx *ParserContext,
-	userToPool *ParsedTransfer,
-	poolToUser *ParsedTransfer,
+	ix *core.AdaptedInstruction,
+	userToPool *ParsedTransfer, // 用户转入资金（quote token 转账）
+	poolToUser *ParsedTransfer, // 用户获得资金（base token 转账）
 	quote types.Pubkey,
 	pairAddress types.Pubkey,
 	dex uint32,
 ) *pb.TradeEvent {
-	ctx.BaseEvent.Type = pb.EventType_TRADE_BUY
-
 	event := &pb.TradeEvent{
-		BaseEvent:     ctx.BaseEvent,
-		Dex:           dex,
-		TokenDecimals: uint32(poolToUser.Decimals), // base token 精度
-		QuoteDecimals: uint32(userToPool.Decimals), // quote token 精度
-
-		TokenAmount:      poolToUser.Amount, // 获得的 base 数量
-		QuoteTokenAmount: userToPool.Amount, // 支付的 quote 数量
-
-		Token:       poolToUser.Token[:], // base token mint
-		QuoteToken:  quote[:],            // quote token mint
-		PairAddress: pairAddress[:],      // 交易对地址
-
-		TokenAccount:      poolToUser.SrcAccount[:],  // base token 池子账户
-		QuoteTokenAccount: userToPool.DestAccount[:], // quote token 池子账户
-		UserWallet:        poolToUser.DestWallet[:],  // 用户钱包地址
-
-		// Swap 后池子余额（PostBalance）
-		PairTokenBalance: poolToUser.SrcPostBalance,
-		PairQuoteBalance: userToPool.DestPostBalance,
-
-		// Swap 后用户余额
-		UserTokenBalance: poolToUser.DestPostBalance,
-		UserQuoteBalance: userToPool.SrcPostBalance,
+		Type:              pb.EventType_TRADE_BUY,
+		EventIndex:        core.BuildEventID(ctx.TxIndex, ix.IxIndex, ix.InnerIndex),
+		Slot:              ctx.Slot,
+		BlockTime:         ctx.BlockTime,
+		TxHash:            ctx.TxHash,
+		TxFrom:            ctx.TxFrom,
+		Dex:               dex,
+		TokenDecimals:     uint32(poolToUser.Decimals), // base 精度
+		QuoteDecimals:     uint32(userToPool.Decimals), // quote 精度
+		TokenAmount:       poolToUser.Amount,           // 获得 base
+		QuoteTokenAmount:  userToPool.Amount,           // 支付 quote
+		Token:             poolToUser.Token[:],
+		QuoteToken:        quote[:],
+		PairAddress:       pairAddress[:],
+		TokenAccount:      poolToUser.SrcAccount[:],
+		QuoteTokenAccount: userToPool.DestAccount[:],
+		UserWallet:        poolToUser.DestWallet[:],
+		PairTokenBalance:  poolToUser.SrcPostBalance,
+		PairQuoteBalance:  userToPool.DestPostBalance,
+		UserTokenBalance:  poolToUser.DestPostBalance,
+		UserQuoteBalance:  userToPool.SrcPostBalance,
 	}
 
-	// 金额估值逻辑（用于后续展示 / K线聚合）
-	if quoteUsd, ok := ctx.Tx.TxCtx.QuotesPrice[quote]; ok {
-		baseAmount := float64(event.TokenAmount) / utils.Pow10(event.TokenDecimals)
-		quoteAmount := float64(event.QuoteTokenAmount) / utils.Pow10(event.QuoteDecimals)
-
-		event.AmountUsd = quoteAmount * quoteUsd
-		if baseAmount > 0 {
-			event.PriceUsd = event.AmountUsd / baseAmount
-		}
-	}
-
+	fillUsdEstimate(event, quote, ctx)
 	return event
 }
 
-// buildSellEvent 构建 Raydium Swap 中的 SELL 类型交易事件：
-// - 用户支付 base token，获得 quote token；
-// - userToPool 表示用户支付的 base 转账；
-// - poolToUser 表示池子转出 quote 给用户；
-// - quote 为已确定的 quote token mint；
-// - accountOffset 为账户偏移（支持 17 / 18 个账户结构）。
+// buildSellEvent 构建 DEX Swap 中的 SELL 类型交易事件。
 func buildSellEvent(
 	ctx *ParserContext,
-	userToPool *ParsedTransfer,
-	poolToUser *ParsedTransfer,
+	ix *core.AdaptedInstruction,
+	userToPool *ParsedTransfer, // 用户转入资金（quote token 转账）
+	poolToUser *ParsedTransfer, // 用户获得资金（base token 转账）
 	quote types.Pubkey,
 	pairAddress types.Pubkey,
 	dex uint32,
 ) *pb.TradeEvent {
-	ctx.BaseEvent.Type = pb.EventType_TRADE_SELL
-
 	event := &pb.TradeEvent{
-		BaseEvent:     ctx.BaseEvent,
-		Dex:           dex,
-		TokenDecimals: uint32(userToPool.Decimals), // base token 精度
-		QuoteDecimals: uint32(poolToUser.Decimals), // quote token 精度
-
-		TokenAmount:      userToPool.Amount, // 卖出的 base 数量
-		QuoteTokenAmount: poolToUser.Amount, // 获得的 quote 数量
-
-		Token:       userToPool.Token[:], // base token mint
-		QuoteToken:  quote[:],            // quote token mint
-		PairAddress: pairAddress[:],      // 交易对地址
-
-		TokenAccount:      userToPool.DestAccount[:], // base token 池子账户
-		QuoteTokenAccount: poolToUser.SrcAccount[:],  // quote token 池子账户
-		UserWallet:        poolToUser.DestWallet[:],  // 用户钱包地址
-
-		// Swap 后池子余额（PostBalance）
-		PairTokenBalance: userToPool.DestPostBalance,
-		PairQuoteBalance: poolToUser.SrcPostBalance,
-
-		// Swap 后用户余额（PostBalance）
-		UserTokenBalance: userToPool.SrcPostBalance,
-		UserQuoteBalance: poolToUser.DestPostBalance,
+		Type:              pb.EventType_TRADE_SELL,
+		EventIndex:        core.BuildEventID(ctx.TxIndex, ix.IxIndex, ix.InnerIndex),
+		Slot:              ctx.Slot,
+		BlockTime:         ctx.BlockTime,
+		TxHash:            ctx.TxHash,
+		TxFrom:            ctx.TxFrom,
+		Dex:               dex,
+		TokenDecimals:     uint32(userToPool.Decimals),
+		QuoteDecimals:     uint32(poolToUser.Decimals),
+		TokenAmount:       userToPool.Amount, // 卖出的 base
+		QuoteTokenAmount:  poolToUser.Amount, // 获得的 quote
+		Token:             userToPool.Token[:],
+		QuoteToken:        quote[:],
+		PairAddress:       pairAddress[:],
+		TokenAccount:      userToPool.DestAccount[:],
+		QuoteTokenAccount: poolToUser.SrcAccount[:],
+		UserWallet:        poolToUser.DestWallet[:],
+		PairTokenBalance:  userToPool.DestPostBalance,
+		PairQuoteBalance:  poolToUser.SrcPostBalance,
+		UserTokenBalance:  userToPool.SrcPostBalance,
+		UserQuoteBalance:  poolToUser.DestPostBalance,
 	}
 
-	// 金额估值逻辑（用于展示 / K 线估算）
+	fillUsdEstimate(event, quote, ctx)
+	return event
+}
+
+// fillUsdEstimate 用 quote token 价格补全交易估值。
+func fillUsdEstimate(event *pb.TradeEvent, quote types.Pubkey, ctx *ParserContext) {
 	if quoteUsd, ok := ctx.Tx.TxCtx.QuotesPrice[quote]; ok {
 		baseAmount := float64(event.TokenAmount) / utils.Pow10(event.TokenDecimals)
 		quoteAmount := float64(event.QuoteTokenAmount) / utils.Pow10(event.QuoteDecimals)
@@ -152,6 +126,4 @@ func buildSellEvent(
 			event.PriceUsd = event.AmountUsd / baseAmount
 		}
 	}
-
-	return event
 }

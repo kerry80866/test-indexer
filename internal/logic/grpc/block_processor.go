@@ -154,3 +154,51 @@ func IsValidGrpcTx(tx *pb.SubscribeUpdateTransactionInfo) bool {
 	}
 	return true
 }
+
+//
+//// 限制并发 goroutine 数量
+//var activeSlotWorkers int64
+//
+//const maxActiveSlotWorkers = 200
+//
+//func tryStartSlotJob(slotID uint64, jobs []*KafkaJob) {
+//	if atomic.AddInt64(&activeSlotWorkers, 1) > maxActiveSlotWorkers {
+//		atomic.AddInt64(&activeSlotWorkers, -1)
+//		log.Printf("❌ slot %d 丢弃：活跃发送任务过多", slotID)
+//		return
+//	}
+//
+//	go func() {
+//		defer atomic.AddInt64(&activeSlotWorkers, -1)
+//
+//		ctx, cancel := context.WithTimeout(context.Background(), 800*time.Millisecond)
+//		defer cancel()
+//
+//		err := dispatchAnRecordProcess(ctx, slotID, producer, jobs, 600*time.Millisecond)
+//		if err != nil {
+//			log.Printf("❌ slot %d 处理失败: %v", slotID, err)
+//			// TODO: 写失败标记 or fallback 处理
+//		}
+//	}()
+//}
+//func dispatchAnRecordProcess(
+//	ctx context.Context,
+//	slotID uint64,
+//	producer *kafka.Producer,
+//	jobs []*KafkaJob,
+//	perMessageTimeout time.Duration,
+//) error {
+//	// 先做 Kafka 推送（阻塞等待）
+//	ok, failed := SendKafkaJobsSafe(ctx, producer, jobs, perMessageTimeout)
+//	log.Printf("✅ slot %d 发送完成（ok=%d failed=%d）", slotID, len(ok), len(failed))
+//
+//	// 接着做落库、状态更新
+//	if err := updateRedis(slotID, ok); err != nil {
+//		return fmt.Errorf("update redis fail: %w", err)
+//	}
+//	if err := writeToDB(slotID, ok); err != nil {
+//		return fmt.Errorf("write db fail: %w", err)
+//	}
+//
+//	return nil
+//}

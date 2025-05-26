@@ -1,11 +1,12 @@
 package core
 
+import "dex-indexer-sol/pb"
+
 type Event struct {
-	Tx        *AdaptedTx // 所属交易上下文，sendEvent期间只读，用于调试与定位
-	EventId   uint32     // ← 来自 proto 的 BaseEvent.event_index
-	EventType uint32     // 自定义枚举，如 Swap, Mint 等
-	Token     []byte     // 主 token（常用于分区 / 过滤）
-	Data      []byte     // 事件原始序列化内容（protobuf / JSON）
+	EventId   uint32    // 构造的唯一事件 ID，基于 txIndex、ixIndex、innerIndex
+	EventType uint32    // 自定义事件类型（枚举）
+	Key       []byte    // Kafka分区key：余额事件是owner，其它类型是base token
+	Event     *pb.Event // 实际事件的 proto 内容
 }
 
 // BuildEventID 构造事件唯一标识 ID（uint32），由 txIndex、ixIndex、innerIndex 组合而成：

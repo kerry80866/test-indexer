@@ -1,6 +1,6 @@
 # GRPC特有配置
 Grpc:
-  Endpoint:           # gRPC 服务端地址
+  Endpoint:            # gRPC 服务端地址
   XToken:                    # 认证用的 x-token
   StreamPingIntervalSec: 20              # Stream心跳包发送间隔（秒）
   KeepalivePingIntervalSec: 12           # gRPC底层keepalive间隔（秒）
@@ -22,7 +22,7 @@ PriceServiceConf:
 # Kafka 生产者配置
 KafkaProducerConf:
   Brokers: "127.0.0.1:9092"              # Kafka 服务器地址，多个地址用逗号分隔
-  BatchSize: 24000                       # 批处理大小（字节）
+  BatchSize: 32768                       # 批处理大小（32KB）
   LingerMs: 5                            # 批处理延迟（毫秒）
   NumPartitions: 3                       # 分区数量
   Topics:

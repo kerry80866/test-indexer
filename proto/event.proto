@@ -1,157 +1,186 @@
 syntax = "proto3";
 
-package dex_event;
+package pb;
 
 option go_package = "dex-indexer-sol/pb;pb"; // 模块名 + pb 输出目录
 
+// 枚举定义：统一的事件类型标识
 enum EventType {
   UNKNOWN = 0;
+
+  // --- 常规交易/流动性类事件 ---
   TRADE_BUY = 1;
   TRADE_SELL = 2;
-  TRADE_UNKNOWN = 3;
-  TRANSFER = 4;
-  ADD_LIQUIDITY = 5;
-  REMOVE_LIQUIDITY = 6;
-  MINT_TO = 7;
-  BURN = 8;
+  TRANSFER = 3;
+  ADD_LIQUIDITY = 4;
+  REMOVE_LIQUIDITY = 5;
+  MINT_TO = 6;
+  BURN = 7;
+
+  // --- 系统/同步类事件（编号从 60 开始） ---
+  BALANCE_UPDATE = 60;
 }
 
-// BaseEvent 表示通用链上事件的基础结构，用于封装通用元信息。
-message BaseEvent {
-  uint32 version = 1;      // 事件格式版本号，便于后续兼容升级
-  uint32 chain_id = 2;     // 链 ID，例如 100000 = Solana
-  EventType type = 3;      // 事件类型
+// slot级别的事件数组（封装一个 slot 的全部事件）
+message Events {
+  uint32 version = 1;         // 批量消息结构版本号（用于升级兼容）
+  uint32 chain_id = 2;        // 链 ID，例如 100000 = Solana
+  uint64 slot = 3;            // 所属 slot
+  repeated Event events = 4;  // 事件数组
+}
 
-  // event_index 是用于表示事件在交易中的定位信息，由一个 32 位无符号整数编码：
-  // [16 bits] tx_index     ：该事件所属交易在当前 block 中的位置（0 ~ 65535）
-  // [ 8 bits] ix_index     ：该事件来源的主指令在交易中的编号（0 ~ 255）
-  // [ 8 bits] inner_index  ：事件在指令内部的相对位置：
-  //                            - 值为 0 表示该事件由主指令本身触发
-  //                            - 值 ≥1 表示该事件由 inner instruction（CPI 调用）触发
-  uint32 event_index = 4;
-
-  uint64 slot = 5;         // 区块 slot（Solana 的主高度单位）
-  int64 block_time = 6;    // 区块时间（Unix 秒级时间戳）
-
-  bytes tx_hash = 7;       // 交易哈希（如 Solana 签名，通常为 64 字节）
-  bytes tx_from = 8;       // 发起者地址（交易 signer）
+// 通用事件包装结构（每条只封装一个子类型）
+message Event {
+  oneof event {               // 子事件体，实际只会出现一个
+    TradeEvent trade = 1;
+    TransferEvent transfer = 2;
+    LiquidityEvent liquidity = 3;
+    MintToEvent mint = 4;
+    BurnEvent burn = 5;
+    BalanceUpdateEvent balance = 6;
+  }
 }
 
 // 交易事件：记录一次成交详情（Swap）
 message TradeEvent {
-  BaseEvent base_event = 1;          // 事件基础信息（包含 slot、tx_hash、event_index 等）
+  EventType type = 1;          // 事件类型（TRADE_BUY / TRADE_SELL / TRADE_UNKNOWN）
+  uint32 event_index = 2;      // 事件定位索引（tx_index << 16 | ix_index << 8 | inner_index）
+  uint64 slot = 3;             // 区块 slot
+  int64 block_time = 4;        // 区块时间（Unix 秒）
+  bytes tx_hash = 5;           // 交易哈希（64 字节）
+  bytes tx_from = 6;           // 发起者地址（signer）
 
-  uint32 token_decimals = 2;         // base token 的精度（如 FUKU = 9）
-  uint32 quote_decimals = 3;         // quote token 的精度（如 USDC = 6）
+  uint32 token_decimals = 7;
+  uint32 quote_decimals = 8;
+  uint32 dex = 9;
 
-  uint32 dex = 4;                    // 所属 DEX 平台编号（如 1 = RaydiumV4，2 = RaydiumCLMM）
+  double amount_usd = 10;
+  double price_usd = 11;
 
-  double amount_usd = 5;             // 交易成交总额（单位 USD，保留浮点精度，例：159.45 表示 $159.45）
-  double price_usd = 6;              // base token 单价（单位 USD，例：100.23 表示每个 token $100.23）
+  uint64 token_amount = 12;
+  uint64 quote_token_amount = 13;
 
-  uint64 token_amount = 7;           // base token 实际成交数量（原生单位）
-  uint64 quote_token_amount = 8;     // quote token 实际成交数量（原生单位）
+  bytes token = 14;
+  bytes quote_token = 15;
+  bytes pair_address = 16;
+  bytes token_account = 17;
+  bytes quote_token_account = 18;
+  bytes user_wallet = 19;
 
-  bytes token = 9;                   // base token 的 mint 地址（如 FUKU）
-  bytes quote_token = 10;            // quote token 的 mint 地址（如 USDC、WSOL）
-
-  bytes pair_address = 11;           // 交易对地址（如 Raydium 的池子地址）
-  bytes token_account = 12;          // base token 的池子账户地址（Pool A）
-  bytes quote_token_account = 13;    // quote token 的池子账户地址（Pool B）
-  bytes user_wallet = 14;            // 用户钱包地址
-
-  uint64 pair_token_balance = 15;    // 交易后池子内 base token 余额
-  uint64 pair_quote_balance = 16;    // 交易后池子内 quote token 余额
-  uint64 user_token_balance = 17;    // 用户钱包中 base token 余额
-  uint64 user_quote_balance = 18;    // 用户钱包中 quote token 余额
+  uint64 pair_token_balance = 20;
+  uint64 pair_quote_balance = 21;
+  uint64 user_token_balance = 22;
+  uint64 user_quote_balance = 23;
 }
 
-// 转账事件：SPL Token 的 Transfer（包括 Token22）
+// 转账事件
 message TransferEvent {
-  BaseEvent base_event = 1;          // 事件基础信息
-
-  bytes token = 2;                   // 被转移的 token mint 地址
-  bytes src_account = 3;             // 来源 token 账户地址（Token Account，而非主钱包地址）
-  bytes dest_account = 4;            // 目标 token 账户地址
-
-  bytes src_wallet = 5;              // 来源钱包地址（通常为 src_account 的 owner）
-  bytes dest_wallet = 6;             // 目标钱包地址（通常为 dest_account 的 owner）
-
-  uint64 amount = 7;                 // 转账数量（原生单位）
-  uint32 decimals = 8;               // token 精度（如 USDC 为 6）
-
-  uint64 src_token_balance = 9;      // 转账后，来源账户余额
-  uint64 dest_token_balance = 10;    // 转账后，目标账户余额
-}
-
-// 流动性事件：添加或移除流动性
-message LiquidityEvent {
-  BaseEvent base_event = 1;          // 事件基础信息
-
-  bytes user_wallet = 2;             // 用户钱包地址
-
-  uint32 token_decimals = 3;         // base token 精度
-  uint32 quote_decimals = 4;         // quote token 精度
-
-  uint32 dex = 5;                    // 所属 DEX 平台编号
-
-  uint64 token_amount = 6;           // base token 添加或移除数量
-  uint64 quote_token_amount = 7;     // quote token 添加或移除数量
-
-  bytes token = 8;                   // base token 的 mint 地址
-  bytes quote_token = 9;             // quote token 的 mint 地址
-
-  bytes pair_address = 10;           // 流动性池地址（LP 池）
-  bytes token_account = 11;          // base token 的池子账户地址
-  bytes quote_token_account = 12;    // quote token 的池子账户地址
-
-  bytes lp_token = 13;               // LP token 的 mint 地址
-  uint64 lp_amount = 14;             // 添加或移除的 LP token 数量
-  uint32 lp_decimals = 15;           // LP token 精度
-
-  uint64 pair_token_balance = 16;    // 当前池子 base token 余额
-  uint64 pair_quote_balance = 17;    // 当前池子 quote token 余额
-  uint64 user_token_balance = 18;    // 用户 base token 余额
-  uint64 user_quote_balance = 19;    // 用户 quote token 余额
-}
-
-// 铸币事件：Token MintTo 操作
-message MintToEvent {
-  BaseEvent base_event = 1;          // 事件基础信息
-
-  bytes token = 2;                   // 被铸造的 token mint 地址
-  bytes to_address = 3;              // 接收者钱包地址
-  bytes to_token_account = 4;        // 接收者的 token account 地址（Solana 特有）
-
-  uint64 amount = 5;                 // 铸造数量（原生单位）
-  uint32 decimals = 6;               // token 精度（uint32 兼容性更好）
-
-  uint64 to_token_balance = 7;       // 接收者当前余额（铸造后）
-}
-
-// 销毁事件：Token Burn 操作
-message BurnEvent {
-  BaseEvent base_event = 1;          // 事件基础信息
-
-  bytes token = 2;                   // 被销毁的 token mint 地址
-  bytes from_address = 3;            // 发起销毁的钱包地址
-  bytes from_token_account = 4;      // 被销毁 token 所在的账户地址
-
-  uint64 amount = 5;                 // 销毁数量（原生单位）
-  uint32 decimals = 6;               // token 精度
-
-  uint64 from_token_balance = 7;     // 销毁后钱包余额
-}
-
-message BalanceUpdateEvent {
-  uint32 version = 1;
-  uint32 chain_id = 2;
+  EventType type = 1;
+  uint32 event_index = 2;
   uint64 slot = 3;
   int64 block_time = 4;
-  bytes token = 5;
-  bytes account = 6;
-  bytes owner = 7;
-  uint64 pre_balance = 8;
-  uint64 post_balance = 9;
-  uint32 decimals = 10;
+  bytes tx_hash = 5;
+  bytes tx_from = 6;
+
+  bytes token = 7;
+  bytes src_account = 8;
+  bytes dest_account = 9;
+
+  bytes src_wallet = 10;
+  bytes dest_wallet = 11;
+
+  uint64 amount = 12;
+  uint32 decimals = 13;
+
+  uint64 src_token_balance = 14;
+  uint64 dest_token_balance = 15;
 }
+
+// 添加/移除流动性事件
+message LiquidityEvent {
+  EventType type = 1;
+  uint32 event_index = 2;
+  uint64 slot = 3;
+  int64 block_time = 4;
+  bytes tx_hash = 5;
+  bytes tx_from = 6;
+
+  bytes user_wallet = 7;
+
+  uint32 token_decimals = 8;
+  uint32 quote_decimals = 9;
+  uint32 dex = 10;
+
+  uint64 token_amount = 11;
+  uint64 quote_token_amount = 12;
+
+  bytes token = 13;
+  bytes quote_token = 14;
+  bytes pair_address = 15;
+  bytes token_account = 16;
+  bytes quote_token_account = 17;
+
+  bytes lp_token = 18;
+  uint64 lp_amount = 19;
+  uint32 lp_decimals = 20;
+
+  uint64 pair_token_balance = 21;
+  uint64 pair_quote_balance = 22;
+  uint64 user_token_balance = 23;
+  uint64 user_quote_balance = 24;
+}
+
+// 铸币事件
+message MintToEvent {
+  EventType type = 1;
+  uint32 event_index = 2;
+  uint64 slot = 3;
+  int64 block_time = 4;
+  bytes tx_hash = 5;
+  bytes tx_from = 6;
+
+  bytes token = 7;
+  bytes to_address = 8;
+  bytes to_token_account = 9;
+
+  uint64 amount = 10;
+  uint32 decimals = 11;
+
+  uint64 to_token_balance = 12;
+}
+
+// 销毁事件
+message BurnEvent {
+  EventType type = 1;
+  uint32 event_index = 2;
+  uint64 slot = 3;
+  int64 block_time = 4;
+  bytes tx_hash = 5;
+  bytes tx_from = 6;
+
+  bytes token = 7;
+  bytes from_address = 8;
+  bytes from_token_account = 9;
+
+  uint64 amount = 10;
+  uint32 decimals = 11;
+
+  uint64 from_token_balance = 12;
+}
+
+// 余额变更事件（如非交易引起的变动，单独记录）
+message BalanceUpdateEvent {
+  EventType type = 1;           // 事件类型（BALANCE_UPDATE）
+  uint32 tx_index = 2;          // tx索引
+  uint64 slot = 3;              // 区块 slot
+  int64 block_time = 4;         // 区块时间（Unix 秒级时间戳）
+
+  bytes token = 5;              // token mint 地址
+  bytes account = 6;            // token account 地址（SPL token）
+  bytes owner = 7;              // 账户拥有者（钱包地址）
+
+  uint64 pre_balance = 8;       // 变更前余额
+  uint64 post_balance = 9;      // 变更后余额
+  uint32 decimals = 10;         // token 精度
+}
+

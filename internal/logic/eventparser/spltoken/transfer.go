@@ -3,9 +3,7 @@ package spltoken
 import (
 	"dex-indexer-sol/internal/logic/core"
 	"dex-indexer-sol/internal/logic/eventparser/common"
-	"dex-indexer-sol/internal/utils"
 	"dex-indexer-sol/pb"
-	"github.com/zeromicro/go-zero/core/logx"
 )
 
 // extractTokenTransferEvent 负责识别并解析 Token Transfer 类型的指令。
@@ -22,13 +20,13 @@ func extractTokenTransferEvent(
 		return nil, current + 1
 	}
 
-	// 原地修改 ctx.BaseEvent 是安全的（tx级别是顺序解析,不会并发）
-	eventType := pb.EventType_TRANSFER
-	ctx.BaseEvent.Type = eventType
-	ctx.BaseEvent.EventIndex = core.BuildEventID(ctx.TxIndex, ix.IxIndex, ix.InnerIndex)
-
 	event := pb.TransferEvent{
-		BaseEvent:        ctx.BaseEvent,
+		Type:             pb.EventType_TRANSFER,
+		EventIndex:       core.BuildEventID(ctx.TxIndex, ix.IxIndex, ix.InnerIndex),
+		Slot:             ctx.Slot,
+		BlockTime:        ctx.BlockTime,
+		TxHash:           ctx.TxHash,
+		TxFrom:           ctx.TxFrom,
 		Token:            parsedTransfer.Token[:],
 		SrcAccount:       parsedTransfer.SrcAccount[:],
 		DestAccount:      parsedTransfer.DestAccount[:],
@@ -40,17 +38,14 @@ func extractTokenTransferEvent(
 		DestTokenBalance: parsedTransfer.DestPostBalance,
 	}
 
-	data, err := utils.EncodeEvent(uint32(eventType), &event)
-	if err != nil {
-		logx.Errorf("encode TransferEvent failed: %v", err)
-		return nil, current + 1
-	}
-
 	return &core.Event{
-		Tx:        ctx.Tx,
-		EventId:   ctx.BaseEvent.EventIndex,
-		EventType: uint32(eventType),
-		Token:     event.Token,
-		Data:      data,
+		EventId:   event.EventIndex,
+		EventType: uint32(event.Type),
+		Key:       event.Token,
+		Event: &pb.Event{
+			Event: &pb.Event_Transfer{
+				Transfer: &event,
+			},
+		},
 	}, current + 1
 }
