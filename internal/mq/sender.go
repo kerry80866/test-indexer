@@ -13,12 +13,13 @@ import (
 
 // KafkaJob 表示一条需要发送的 Kafka 消息
 type KafkaJob struct {
-	Topic     string
-	Partition int32
-	Value     []byte
-	Msg       proto.Message
-	SendTime  time.Duration // 实际发送耗时
-	AckTime   time.Duration // 等待确认耗时
+	Topic       string
+	Partition   int32
+	Value       []byte
+	Msg         proto.Message
+	SendTime    time.Duration // 实际发送耗时
+	AckTime     time.Duration // 等待确认耗时
+	MarshalTime time.Duration // 序列化耗时
 }
 
 // KafkaSendResult 表示每条消息的发送结果
@@ -53,8 +54,11 @@ func SendKafkaJobs(
 					resultCh <- KafkaSendResult{Job: job, Err: fmt.Errorf("no value or message provided")}
 					return
 				}
+				// 记录序列化开始时间
+				marshalStartTime := time.Now()
 				var err error
 				job.Value, err = proto.Marshal(job.Msg)
+				job.MarshalTime = time.Since(marshalStartTime)
 				if err != nil {
 					resultCh <- KafkaSendResult{Job: job, Err: fmt.Errorf("marshal error: %w", err)}
 					return

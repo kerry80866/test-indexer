@@ -204,7 +204,7 @@ func (p *BlockProcessor) dispatchSlot(slotID uint64, blockTime int64, jobs []*mq
 		okJobs, failedJobs := mq.SendKafkaJobs(ctx, p.sc.Producer, jobs, sendTimeout)
 
 		// 计算最大发送和确认时间
-		var maxSendTime, maxAckTime time.Duration
+		var maxSendTime, maxAckTime, maxMarshalTime time.Duration
 		successCount := len(okJobs)
 		for _, job := range okJobs {
 			if job.SendTime > maxSendTime {
@@ -212,6 +212,9 @@ func (p *BlockProcessor) dispatchSlot(slotID uint64, blockTime int64, jobs []*mq
 			}
 			if job.AckTime > maxAckTime {
 				maxAckTime = job.AckTime
+			}
+			if job.MarshalTime > maxMarshalTime {
+				maxMarshalTime = job.MarshalTime
 			}
 		}
 
@@ -227,13 +230,13 @@ func (p *BlockProcessor) dispatchSlot(slotID uint64, blockTime int64, jobs []*mq
 			progressTime := time.Since(progressStartTime)
 			totalTime := time.Since(startTime)
 
-			p.Infof("✅ [Dispatch] slot %d 处理完成 - Kafka最大发送耗时: %v, 最大确认耗时: %v, 进度写入耗时: %v, 总耗时: %v（成功=%d）",
-				slotID, maxSendTime, maxAckTime, progressTime, totalTime, successCount)
+			p.Infof("✅ [Dispatch] slot %d 处理完成 - 最大序列化耗时: %v, Kafka最大发送耗时: %v, 最大确认耗时: %v, 进度写入耗时: %v, 总耗时: %v（成功=%d）",
+				slotID, maxMarshalTime, maxSendTime, maxAckTime, progressTime, totalTime, successCount)
 		} else {
 			// ❌ Kafka 有失败，不写进度
 			totalTime := time.Since(startTime)
-			p.Errorf("❌ [Dispatch] slot %d 处理失败 - Kafka最大发送耗时: %v, 最大确认耗时: %v, 总耗时: %v（成功=%d 失败=%d）",
-				slotID, maxSendTime, maxAckTime, totalTime, successCount, len(failedJobs))
+			p.Errorf("❌ [Dispatch] slot %d 处理失败 - 最大序列化耗时: %v, Kafka最大发送耗时: %v, 最大确认耗时: %v, 总耗时: %v（成功=%d 失败=%d）",
+				slotID, maxMarshalTime, maxSendTime, maxAckTime, totalTime, successCount, len(failedJobs))
 		}
 	}()
 }
