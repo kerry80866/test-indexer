@@ -26,7 +26,8 @@ message Events {
   uint32 version = 1;         // 批量消息结构版本号（用于升级兼容）
   uint32 chain_id = 2;        // 链 ID，例如 100000 = Solana
   uint64 slot = 3;            // 所属 slot
-  repeated Event events = 4;  // 事件数组
+  int32 source = 4;           // 数据来源：1=GRPC补块，2=RPC推送
+  repeated Event events = 5;  // 事件数组
 }
 
 // 通用事件包装结构（每条只封装一个子类型）

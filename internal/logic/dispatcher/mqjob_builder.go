@@ -14,15 +14,16 @@ import (
 // 该模块构建后的 []*mq.KafkaJob 可直接传入 mq.SendKafkaJobs 发送。
 func BuildAllKafkaJobs(
 	slot uint64,
+	source int32,
 	results []core.ParsedTxResult,
 	balanceEvents []*core.Event,
 	cfg config.KafkaProducerConfig,
 ) []*mq.KafkaJob {
 	// 构造普通事件（如交易、流动性）Kafka Jobs
-	eventJobs := BuildEventKafkaJobs(slot, cfg.Topics.Event, cfg.Partitions.Event, results)
+	eventJobs := BuildEventKafkaJobs(slot, source, cfg.Topics.Event, cfg.Partitions.Event, results)
 
 	// 构造余额变动事件 Kafka Jobs
-	balanceJobs := BuildBalanceKafkaJobs(slot, cfg.Topics.Balance, cfg.Partitions.Balance, balanceEvents)
+	balanceJobs := BuildBalanceKafkaJobs(slot, source, cfg.Topics.Balance, cfg.Partitions.Balance, balanceEvents)
 
 	// 合并所有 Kafka Jobs
 	jobs := make([]*mq.KafkaJob, 0, len(eventJobs)+len(balanceJobs))
@@ -35,6 +36,7 @@ func BuildAllKafkaJobs(
 // 每个 Job 代表一个分区内的事件聚合，包含一个 pb.Events protobuf 封装。
 func BuildEventKafkaJobs(
 	slot uint64,
+	source int32,
 	topic string,
 	partitions int,
 	results []core.ParsedTxResult,
@@ -68,13 +70,14 @@ func BuildEventKafkaJobs(
 	}
 
 	// 将每个分区内的事件构造成 KafkaJob
-	return buildJobs(topic, slot, buckets)
+	return buildJobs(topic, slot, source, buckets)
 }
 
 // BuildBalanceKafkaJobs 构造余额事件的 KafkaJob。
 // 与 BuildEventKafkaJobs 逻辑一致，但输入为已聚合好的 balanceEvents。
 func BuildBalanceKafkaJobs(
 	slot uint64,
+	source int32,
 	topic string,
 	partitions int,
 	events []*core.Event,
@@ -99,11 +102,11 @@ func BuildBalanceKafkaJobs(
 		buckets[pid] = append(buckets[pid], evt.Event)
 	}
 
-	return buildJobs(topic, slot, buckets)
+	return buildJobs(topic, slot, source, buckets)
 }
 
 // buildJobs 将每个分区 bucket 中的事件封装为 KafkaJob。
-func buildJobs(topic string, slot uint64, buckets [][]*pb.Event) []*mq.KafkaJob {
+func buildJobs(topic string, slot uint64, source int32, buckets [][]*pb.Event) []*mq.KafkaJob {
 	jobs := make([]*mq.KafkaJob, 0, len(buckets))
 	for pid, list := range buckets {
 		if len(list) == 0 {
@@ -116,6 +119,7 @@ func buildJobs(topic string, slot uint64, buckets [][]*pb.Event) []*mq.KafkaJob 
 				Version: 1,
 				ChainId: consts.ChainIDSolana,
 				Slot:    slot,
+				Source:  source,
 				Events:  list,
 			},
 		})

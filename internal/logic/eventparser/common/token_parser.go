@@ -5,44 +5,64 @@ import (
 	"dex-indexer-sol/internal/types"
 	"encoding/binary"
 	sdktoken "github.com/blocto/solana-go-sdk/program/token"
+	"github.com/mr-tron/base58"
+	"github.com/zeromicro/go-zero/core/logx"
 )
 
-// ParsedTransfer 表示一次 SPL Token 转账操作（Transfer 或 TransferChecked）的解析结果。
+// 合约源代码:
+// SplToken: https://github.com/solana-program/token/blob/main/program/src/instruction.rs
+// Token2022: https://github.com/solana-program/token-2022
+
+// ParsedTransfer 表示一次 SPL Token 转账操作（Transfer 或 TransferChecked）
 type ParsedTransfer struct {
 	Token           types.Pubkey // Token 的 mint 地址
-	SrcAccount      types.Pubkey // 来源 SPL Token 账户地址（转出）
-	DestAccount     types.Pubkey // 目标 SPL Token 账户地址（转入）
+	SrcAccount      types.Pubkey // 来源 SPL Token 账户地址
+	DestAccount     types.Pubkey // 目标 SPL Token 账户地址
 	SrcWallet       types.Pubkey // 来源钱包地址（TokenAccount 的 owner）
 	DestWallet      types.Pubkey // 目标钱包地址（TokenAccount 的 owner）
 	Amount          uint64       // 转账金额（最小单位）
-	Decimals        uint8        // Token 精度（来自 source）
-	SrcPostBalance  uint64       // 转账后，来源账户余额（PostBalance）
-	DestPostBalance uint64       // 转账后，目标账户余额（PostBalance）
+	Decimals        uint8        // Token 精度
+	SrcPostBalance  uint64       // 转出后余额
+	DestPostBalance uint64       // 转入后余额
 }
 
-// ParseTransferInstruction 尝试从一条指令中解析出 SPL Token 转账信息（Transfer / TransferChecked）。
-// 若指令类型、格式或账户结构不符合预期，返回 (nil, false)。
+// ParsedMintTo 表示一次 SPL Token 铸币操作（MintTo 或 MintToChecked）
+type ParsedMintTo struct {
+	Token           types.Pubkey // Token 的 mint 地址
+	DestAccount     types.Pubkey // 目标 SPL Token 账户地址
+	DestWallet      types.Pubkey // 目标钱包地址（TokenAccount 的 owner）
+	Amount          uint64       // 铸币数量
+	Decimals        uint8        // Token 精度
+	DestPostBalance uint64       // 铸币后余额
+}
+
+// ParsedBurn 表示一次 SPL Token 销毁操作（Burn 或 BurnChecked）
+type ParsedBurn struct {
+	Token          types.Pubkey // 被销毁的 Token 的 mint 地址
+	SrcAccount     types.Pubkey // 来源 SPL Token 账户地址（被销毁 Token 所在账户）
+	SrcWallet      types.Pubkey // 来源钱包地址（TokenAccount 的 owner）
+	Amount         uint64       // 销毁数量（最小单位）
+	Decimals       uint8        // Token 精度
+	SrcPostBalance uint64       // 销毁后余额（来源账户的 PostBalance）
+}
+
+// ParseTransferInstruction 解析 Transfer / TransferChecked 指令
 func ParseTransferInstruction(ctx *ParserContext, ix *core.AdaptedInstruction) (*ParsedTransfer, bool) {
-	if len(ix.Data) == 0 {
+	if len(ix.Data) < 9 || len(ix.Accounts) < 3 {
 		return nil, false
 	}
 
 	switch ix.Data[0] {
+	// Transfer: [0]=instr, [1:9]=amount
+	// accounts = [src_account, dest_account, authority_wallet]
 	case byte(sdktoken.InstructionTransfer):
-		// Transfer 指令格式：
-		//   [0]      = instruction (1 byte)
-		//   [1:9]    = amount (8 bytes)
-		//   accounts = [src_account, dest_account, authority_wallet]
-		if len(ix.Data) != 9 || len(ix.Accounts) < 3 {
-			return nil, false
-		}
-
 		srcInfo, ok1 := ctx.Balances[ix.Accounts[0]]
 		destInfo, ok2 := ctx.Balances[ix.Accounts[1]]
 		if !ok1 || !ok2 {
+			logx.Errorf("[Transfer] tx=%s: balance missing src=%s ok=%v dest=%s ok=%v",
+				base58.Encode(ctx.TxHash), ix.Accounts[0], ok1, ix.Accounts[1], ok2)
 			return nil, false
 		}
-
 		return &ParsedTransfer{
 			Token:           srcInfo.Token,
 			SrcAccount:      ix.Accounts[0],
@@ -55,34 +75,96 @@ func ParseTransferInstruction(ctx *ParserContext, ix *core.AdaptedInstruction) (
 			DestPostBalance: destInfo.PostBalance,
 		}, true
 
+	// TransferChecked: [0]=instr, [1:9]=amount, [9]=decimals
+	// accounts = [src_account, mint, dest_account, authority_wallet]
 	case byte(sdktoken.InstructionTransferChecked):
-		// TransferChecked 指令格式：
-		//   [0]      = instruction (1 byte)
-		//   [1:9]    = amount (8 bytes)
-		//   [9]      = decimals (1 byte)
-		//   accounts = [src_account, mint, dest_account, authority_wallet]
-		if len(ix.Data) != 10 || len(ix.Accounts) < 4 {
+		if len(ix.Data) < 10 || len(ix.Accounts) < 4 {
 			return nil, false
 		}
-
 		srcInfo, ok1 := ctx.Balances[ix.Accounts[0]]
 		destInfo, ok2 := ctx.Balances[ix.Accounts[2]]
 		if !ok1 || !ok2 {
+			logx.Errorf("[TransferChecked] tx=%s: balance missing src=%s ok=%v dest=%s ok=%v",
+				base58.Encode(ctx.TxHash), ix.Accounts[0], ok1, ix.Accounts[2], ok2)
 			return nil, false
 		}
-
+		if srcInfo.Token != ix.Accounts[1] {
+			logx.Errorf("[TransferChecked] tx=%s: mint mismatch, balance.token=%s, ix.mint=%s (account=%s)",
+				base58.Encode(ctx.TxHash), srcInfo.Token, ix.Accounts[1], ix.Accounts[0])
+		}
 		return &ParsedTransfer{
-			Token:           srcInfo.Token, // 通常等于 ix.Accounts[1]（mint），此处从 balances 获取更安全
+			Token:           srcInfo.Token,
 			SrcAccount:      ix.Accounts[0],
 			DestAccount:     ix.Accounts[2],
 			SrcWallet:       ix.Accounts[3],
 			DestWallet:      destInfo.Owner,
 			Amount:          binary.LittleEndian.Uint64(ix.Data[1:9]),
-			Decimals:        srcInfo.Decimals, // ix.Data[9] 可作为校验备用
+			Decimals:        srcInfo.Decimals,
 			SrcPostBalance:  srcInfo.PostBalance,
 			DestPostBalance: destInfo.PostBalance,
 		}, true
 	}
-
 	return nil, false
+}
+
+// ParseMintToInstruction 解析 MintTo / MintToChecked 指令
+func ParseMintToInstruction(ctx *ParserContext, ix *core.AdaptedInstruction) (*ParsedMintTo, bool) {
+	// MintTo: [0]=instr, [1:9]=amount, [9]=decimals (可选)
+	// accounts = [mint, dest_token_account, authority_wallet]
+	if len(ix.Data) < 9 || len(ix.Accounts) < 3 {
+		return nil, false
+	}
+	if ix.Data[0] != byte(sdktoken.InstructionMintTo) &&
+		ix.Data[0] != byte(sdktoken.InstructionMintToChecked) {
+		return nil, false
+	}
+	info, ok := ctx.Balances[ix.Accounts[1]]
+	if !ok {
+		logx.Errorf("[MintTo] tx=%s: dest_token_account missing: %s",
+			base58.Encode(ctx.TxHash), ix.Accounts[1])
+		return nil, false
+	}
+	if info.Token != ix.Accounts[0] {
+		logx.Errorf("[MintTo] tx=%s: mint mismatch, balance.token=%s, ix.mint=%s (account=%s)",
+			base58.Encode(ctx.TxHash), info.Token, ix.Accounts[0], ix.Accounts[1])
+	}
+	return &ParsedMintTo{
+		Token:           ix.Accounts[0], // Accounts[0]更贴近指令定义，因此mintTo更倾向于Accounts[0],而不是info.Token
+		DestAccount:     ix.Accounts[1],
+		DestWallet:      ix.Accounts[2],
+		Amount:          binary.LittleEndian.Uint64(ix.Data[1:9]),
+		Decimals:        info.Decimals,
+		DestPostBalance: info.PostBalance,
+	}, true
+}
+
+// ParseBurnInstruction 解析 Burn / BurnChecked 指令
+func ParseBurnInstruction(ctx *ParserContext, ix *core.AdaptedInstruction) (*ParsedBurn, bool) {
+	// Burn: [0]=instr, [1:9]=amount, [9]=decimals (仅 BurnChecked 有)
+	// accounts = [src_token_account, mint, authority_wallet]
+	if len(ix.Data) < 9 || len(ix.Accounts) < 3 {
+		return nil, false
+	}
+	if ix.Data[0] != byte(sdktoken.InstructionBurn) &&
+		ix.Data[0] != byte(sdktoken.InstructionBurnChecked) {
+		return nil, false
+	}
+	info, ok := ctx.Balances[ix.Accounts[0]]
+	if !ok {
+		logx.Errorf("[Burn] tx=%s: src_token_account missing: %s",
+			base58.Encode(ctx.TxHash), ix.Accounts[0])
+		return nil, false
+	}
+	if info.Token != ix.Accounts[1] {
+		logx.Errorf("[Burn] tx=%s: mint mismatch, balance.token=%s, ix.mint=%s (account=%s)",
+			base58.Encode(ctx.TxHash), info.Token, ix.Accounts[1], ix.Accounts[0])
+	}
+	return &ParsedBurn{
+		Token:          info.Token,
+		SrcAccount:     ix.Accounts[0],
+		SrcWallet:      ix.Accounts[2],
+		Amount:         binary.LittleEndian.Uint64(ix.Data[1:9]),
+		Decimals:       info.Decimals,
+		SrcPostBalance: info.PostBalance,
+	}, true
 }

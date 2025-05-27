@@ -35,6 +35,7 @@ KafkaProducerConf:
     Balance: 4                           # balance topic 的分区数
     Event:   3                           # event topic 的分区数
 
+
 ProgressConf:
   # 判定是否为“近期 block”的时间阈值（秒）
   # 小于该时间的 block 将直接处理（跳过 Redis & DB 判重）

@@ -97,7 +97,8 @@ type Events struct {
 	Version       uint32                 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`                // 批量消息结构版本号（用于升级兼容）
 	ChainId       uint32                 `protobuf:"varint,2,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty"` // 链 ID，例如 100000 = Solana
 	Slot          uint64                 `protobuf:"varint,3,opt,name=slot,proto3" json:"slot,omitempty"`                      // 所属 slot
-	Events        []*Event               `protobuf:"bytes,4,rep,name=events,proto3" json:"events,omitempty"`                   // 事件数组
+	Source        int32                  `protobuf:"varint,4,opt,name=source,proto3" json:"source,omitempty"`                  // 数据来源：1=GRPC补块，2=RPC推送
+	Events        []*Event               `protobuf:"bytes,5,rep,name=events,proto3" json:"events,omitempty"`                   // 事件数组
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -149,6 +150,13 @@ func (x *Events) GetChainId() uint32 {
 func (x *Events) GetSlot() uint64 {
 	if x != nil {
 		return x.Slot
+	}
+	return 0
+}
+
+func (x *Events) GetSource() int32 {
+	if x != nil {
+		return x.Source
 	}
 	return 0
 }
@@ -1301,12 +1309,13 @@ var File_event_proto protoreflect.FileDescriptor
 
 const file_event_proto_rawDesc = "" +
 	"\n" +
-	"\vevent.proto\x12\x02pb\"t\n" +
+	"\vevent.proto\x12\x02pb\"\x8c\x01\n" +
 	"\x06Events\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\rR\aversion\x12\x19\n" +
 	"\bchain_id\x18\x02 \x01(\rR\achainId\x12\x12\n" +
-	"\x04slot\x18\x03 \x01(\x04R\x04slot\x12!\n" +
-	"\x06events\x18\x04 \x03(\v2\t.pb.EventR\x06events\"\x9d\x02\n" +
+	"\x04slot\x18\x03 \x01(\x04R\x04slot\x12\x16\n" +
+	"\x06source\x18\x04 \x01(\x05R\x06source\x12!\n" +
+	"\x06events\x18\x05 \x03(\v2\t.pb.EventR\x06events\"\x9d\x02\n" +
 	"\x05Event\x12&\n" +
 	"\x05trade\x18\x01 \x01(\v2\x0e.pb.TradeEventH\x00R\x05trade\x12/\n" +
 	"\btransfer\x18\x02 \x01(\v2\x11.pb.TransferEventH\x00R\btransfer\x122\n" +

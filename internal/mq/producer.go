@@ -6,7 +6,6 @@ import (
 	"dex-indexer-sol/internal/utils"
 	"fmt"
 	"github.com/zeromicro/go-zero/core/logx"
-	"os"
 	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
@@ -95,7 +94,7 @@ func NewKafkaProducer(cfg config.KafkaProducerConfig) (*kafka.Producer, error) {
 	producer, err := kafka.NewProducer(&kafka.ConfigMap{
 		// 基础连接
 		"bootstrap.servers": cfg.Brokers,
-		"client.id":         fmt.Sprintf("solana-grpc-indexer-%s-%d", utils.GetLocalIP(), os.Getpid()),
+		"client.id":         fmt.Sprintf("solana-grpc-indexer-%s", utils.GetLocalIP()),
 
 		// PLAINTEXT: 不加密(明文传输), 不认证
 		// SSL: 只加密，不认证
@@ -116,14 +115,15 @@ func NewKafkaProducer(cfg config.KafkaProducerConfig) (*kafka.Producer, error) {
 		//"sasl.oauthbearer.token.endpoint.url": "https://your-auth.com/oauth2/token", // 可选
 
 		// 可靠性保障
-		"acks":               "all",
-		"enable.idempotence": false,
+		"acks":                                  "all", // 必须
+		"enable.idempotence":                    true,  // 幂等开启
+		"max.in.flight.requests.per.connection": 5,     // 幂等场景下最大值为 5
 
 		// 超时与重试
-		"delivery.timeout.ms":      30000,
-		"request.timeout.ms":       30000,
-		"message.send.max.retries": 3,
-		"retry.backoff.ms":         100,
+		"delivery.timeout.ms": 30000,
+		"request.timeout.ms":  30000,
+		"retries":             5,   // 重试次数必须 > 0
+		"retry.backoff.ms":    100, // 重试间隔
 
 		// 性能优化
 		"batch.size":       batchSize,

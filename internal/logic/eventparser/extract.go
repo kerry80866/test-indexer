@@ -28,12 +28,13 @@ func ExtractEventsFromTx(adaptedTx *core.AdaptedTx) []*core.Event {
 	}()
 
 	ctx := common.BuildParserContext(adaptedTx)
-
 	instrs := ctx.Tx.Instructions
-	instrLen := len(instrs)
-	result := make([]*core.Event, 0, instrLen)
 
-	for i := 0; i < instrLen; {
+	// 预处理：扫描 InitializeAccount 指令，补全 TokenAccount → Mint → Owner 映射
+	common.PreScanInitAccountBalances(ctx, instrs)
+
+	result := make([]*core.Event, 0, len(instrs))
+	for i := 0; i < len(instrs); {
 		ix := instrs[i]
 		if handler, ok := handlers[ix.ProgramID]; ok {
 			event, next := handler(ctx, instrs, i)

@@ -22,6 +22,7 @@ import (
 )
 
 const maxSlotDispatch = 200
+const sourceGrpc = 1
 
 type BlockProcessor struct {
 	sc                 *svc.GrpcServiceContext
@@ -113,7 +114,7 @@ func (p *BlockProcessor) procBlock(block *pb.SubscribeUpdateBlock) {
 
 	// 5. 生成mq任务
 	mqStart := time.Now()
-	mqjobs := dispatcher.BuildAllKafkaJobs(txCtx.Slot, results, balanceEvents, p.sc.Config.KafkaProducerConf)
+	mqjobs := dispatcher.BuildAllKafkaJobs(txCtx.Slot, sourceGrpc, results, balanceEvents, p.sc.Config.KafkaProducerConf)
 	p.Infof("MQ任务生成耗时: %v, 总任务数: %d (普通事件: %d, 余额事件: %d)",
 		time.Since(mqStart), len(mqjobs), totalEvents, len(balanceEvents))
 

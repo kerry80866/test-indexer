@@ -14,7 +14,7 @@ func RegisterHandlers(m map[types.Pubkey]common.InstructionHandler) {
 	m[consts.TokenProgram2022] = handleTokenInstruction
 }
 
-// handleTokenInstruction 负责识别并解析 Token Transfer 类型的指令。
+// handleTokenInstruction 根据 SPL Token 指令类型分派至对应解析函数。
 // 返回生成的事件（若有）和下一条待处理的指令索引。
 func handleTokenInstruction(
 	ctx *common.ParserContext,
@@ -27,17 +27,20 @@ func handleTokenInstruction(
 	}
 
 	switch ix.Data[0] {
-	case byte(sdktoken.InstructionTransfer), byte(sdktoken.InstructionTransferChecked):
+	case byte(sdktoken.InstructionTransfer),
+		byte(sdktoken.InstructionTransferChecked):
 		return extractTokenTransferEvent(ctx, instrs, current)
 
-	case byte(sdktoken.InstructionInitializeAccount),
-		byte(sdktoken.InstructionInitializeAccount2),
-		byte(sdktoken.InstructionInitializeAccount3):
-		tryFillBalanceFromInitAccount(ctx, ix)
-		return nil, current + 1
+	case byte(sdktoken.InstructionMintTo),
+		byte(sdktoken.InstructionMintToChecked):
+		return extractTokenMintToEvent(ctx, instrs, current)
+
+	case byte(sdktoken.InstructionBurn),
+		byte(sdktoken.InstructionBurnChecked):
+		return extractTokenBurnEvent(ctx, instrs, current)
 
 	default:
-		// 非关心的 TokenProgram 指令，忽略
+		// 忽略非关心的 TokenProgram 指令
 		return nil, current + 1
 	}
 }
