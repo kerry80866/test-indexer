@@ -24,10 +24,9 @@ type KafkaJob struct {
 
 // KafkaSendResult 表示每条消息的发送结果
 type KafkaSendResult struct {
-	Job      *KafkaJob
-	Err      error
-	SendTime time.Duration // 实际发送耗时
-	AckTime  time.Duration // 等待确认耗时
+	Job     *KafkaJob
+	Err     error
+	AckTime time.Duration // 等待确认耗时
 }
 
 // SendKafkaJobs 并发发送多条 Kafka 消息，支持外部 context 控制超时/取消
@@ -43,7 +42,8 @@ func SendKafkaJobs(
 	var wg sync.WaitGroup
 	resultCh := make(chan KafkaSendResult, len(jobs)) // 缓冲避免阻塞
 
-	for _, job := range jobs {
+	for i := range jobs {
+		job := jobs[i] // 显式复制，避免捕获循环变量引用
 		wg.Add(1)
 		go func(job *KafkaJob) {
 			defer wg.Done()
@@ -105,12 +105,12 @@ func SendKafkaJobs(
 					resultCh <- KafkaSendResult{Job: job, Err: nil}
 				}
 			case <-time.After(perMessageTimeout):
-				go safeDrain(deliveryChan, job.Topic)
+				go safeDrain(deliveryChan)
 				job.SendTime = sendTime
 				job.AckTime = time.Since(ackStartTime)
 				resultCh <- KafkaSendResult{Job: job, Err: fmt.Errorf("delivery timeout (>%v)", perMessageTimeout)}
 			case <-ctx.Done():
-				go safeDrain(deliveryChan, job.Topic)
+				go safeDrain(deliveryChan)
 				job.SendTime = sendTime
 				job.AckTime = time.Since(ackStartTime)
 				resultCh <- KafkaSendResult{Job: job, Err: fmt.Errorf("ctx cancelled: %w", ctx.Err())}
@@ -137,7 +137,7 @@ func SendKafkaJobs(
 }
 
 // safeDrain 用于确保 deliveryChan 被 drain 避免 Kafka 回调阻塞
-func safeDrain(ch <-chan kafka.Event, topic string) {
+func safeDrain(ch <-chan kafka.Event) {
 	defer func() {
 		_ = recover() // 如果 deliveryChan 已被 Kafka 回收导致 panic（极少见），吞掉
 	}()

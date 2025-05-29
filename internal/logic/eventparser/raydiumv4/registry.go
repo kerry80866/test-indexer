@@ -36,7 +36,10 @@ func handleRaydiumV4Instruction(
 	case SwapBaseIn, SwapBaseOut:
 		return extractRaydiumV4SwapEvent(ctx, instrs, current)
 
-	case Deposit, Withdraw:
+	case Deposit:
+		return extractRaydiumV4AddLiquidityEvent(ctx, instrs, current)
+
+	case Withdraw:
 		// TODO: return extractLiquidity(...)
 		return nil, current + 1
 

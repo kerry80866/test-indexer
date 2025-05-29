@@ -53,25 +53,25 @@ message TradeEvent {
 
   uint32 token_decimals = 7;
   uint32 quote_decimals = 8;
-  uint32 dex = 9;
+  uint32 dex = 9;              // 所属 DEX 平台编号（如 1 = RaydiumV4，2 = RaydiumCLMM）
 
-  double amount_usd = 10;
-  double price_usd = 11;
+  double amount_usd = 10;      // 交易成交总额（单位 USD，保留浮点精度，例：159.45 表示 $159.45）
+  double price_usd = 11;       // base token 单价（单位 USD，例：100.23 表示每个 token $100.23）
 
-  uint64 token_amount = 12;
-  uint64 quote_token_amount = 13;
+  uint64 token_amount = 12;       // base token 实际成交数量（原生最小单位）
+  uint64 quote_token_amount = 13; // quote token 实际成交数量（原生最小单位）
 
-  bytes token = 14;
-  bytes quote_token = 15;
-  bytes pair_address = 16;
-  bytes token_account = 17;
-  bytes quote_token_account = 18;
-  bytes user_wallet = 19;
+  bytes token = 14;               // base token 的 mint 地址
+  bytes quote_token = 15;         // quote token 的 mint 地址
+  bytes pair_address = 16;        // 池子地址（如 Raydium 的池子地址）
+  bytes token_account = 17;       // 池子base token的账户地址
+  bytes quote_token_account = 18; // 池子quote token的账户地址
+  bytes user_wallet = 19;         // 用户钱包地址
 
-  uint64 pair_token_balance = 20;
-  uint64 pair_quote_balance = 21;
-  uint64 user_token_balance = 22;
-  uint64 user_quote_balance = 23;
+  uint64 pair_token_balance = 20; // 交易后池子base token余额
+  uint64 pair_quote_balance = 21; // 交易后池子quote token余额
+  uint64 user_token_balance = 22; // 交易后用户base token余额
+  uint64 user_quote_balance = 23; // 交易后用户quote token余额
 }
 
 // 转账事件
@@ -83,18 +83,18 @@ message TransferEvent {
   bytes tx_hash = 5;
   bytes tx_from = 6;
 
-  bytes token = 7;
-  bytes src_account = 8;
-  bytes dest_account = 9;
+  bytes token = 7;        // 被转移token的mint地址
+  bytes src_account = 8;  // 来源 token 账户地址
+  bytes dest_account = 9; // 目标 token 账户地址
 
-  bytes src_wallet = 10;
-  bytes dest_wallet = 11;
+  bytes src_wallet = 10;  // 来源钱包地址（为src_account的owner）
+  bytes dest_wallet = 11; // 目标钱包地址（为dest_account的owner）
 
-  uint64 amount = 12;
-  uint32 decimals = 13;
+  uint64 amount = 12;     // 转账数量（原生单位）
+  uint32 decimals = 13;   // token 精度
 
-  uint64 src_token_balance = 14;
-  uint64 dest_token_balance = 15;
+  uint64 src_token_balance = 14;  // 转账后，来源账户余额
+  uint64 dest_token_balance = 15; // 转账后，目标账户余额
 }
 
 // 添加/移除流动性事件
@@ -108,27 +108,27 @@ message LiquidityEvent {
 
   bytes user_wallet = 7;
 
-  uint32 token_decimals = 8;
-  uint32 quote_decimals = 9;
-  uint32 dex = 10;
+  uint32 token_decimals = 8;  // base token 精度
+  uint32 quote_decimals = 9;  // quote token 精度
+  uint32 dex = 10;            // 所属 DEX 平台编号
 
-  uint64 token_amount = 11;
-  uint64 quote_token_amount = 12;
+  uint64 token_amount = 11;       // base token 添加或移除数量
+  uint64 quote_token_amount = 12; // quote token 添加或移除数量
 
-  bytes token = 13;
-  bytes quote_token = 14;
-  bytes pair_address = 15;
-  bytes token_account = 16;
-  bytes quote_token_account = 17;
+  bytes token = 13;               // base token 的 mint 地址
+  bytes quote_token = 14;         // quote token 的 mint 地址
+  bytes pair_address = 15;        // 池子地址
+  bytes token_account = 16;       // 池子base token的账户地址
+  bytes quote_token_account = 17; // 池子quote token的账户地址
 
   bytes lp_token = 18;
   uint64 lp_amount = 19;
   uint32 lp_decimals = 20;
 
-  uint64 pair_token_balance = 21;
-  uint64 pair_quote_balance = 22;
-  uint64 user_token_balance = 23;
-  uint64 user_quote_balance = 24;
+  uint64 pair_token_balance = 21; // 当前池子 base token 余额
+  uint64 pair_quote_balance = 22; // 当前池子 quote token 余额
+  uint64 user_token_balance = 23; // 用户 base token 余额
+  uint64 user_quote_balance = 24; // 用户 quote token 余额
 }
 
 // 铸币事件

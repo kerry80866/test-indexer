@@ -5,7 +5,6 @@ import (
 	"dex-indexer-sol/internal/logic/core"
 	"dex-indexer-sol/internal/types"
 	sdktoken "github.com/blocto/solana-go-sdk/program/token"
-	"github.com/mr-tron/base58"
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -60,7 +59,7 @@ func tryFillBalanceFromInitAccount(ctx *ParserContext, ix *core.AdaptedInstructi
 		owner, err = types.PubkeyFromBytes(ix.Data[1:33])
 		if err != nil {
 			logx.Errorf("[tryFillBalance] tx=%s: failed to decode owner pubkey from Data[1:33], err=%v, ix: program=%s ixIndex=%d innerIndex=%d",
-				base58.Encode(ctx.TxHash), err, ix.ProgramID, ix.IxIndex, ix.InnerIndex)
+				ctx.TxHashString(), err, ix.ProgramID, ix.IxIndex, ix.InnerIndex)
 			return
 		}
 
@@ -80,7 +79,7 @@ func tryFillBalanceFromInitAccount(ctx *ParserContext, ix *core.AdaptedInstructi
 			}
 		} else {
 			logx.Errorf("[tryFillBalance] tx=%s: missing decimals for mint=%s (tokenAccount=%s), ix: program=%s ixIndex=%d innerIndex=%d",
-				base58.Encode(ctx.TxHash), mint, tokenAccount, ix.ProgramID, ix.IxIndex, ix.InnerIndex)
+				ctx.TxHashString(), mint, tokenAccount, ix.ProgramID, ix.IxIndex, ix.InnerIndex)
 		}
 	}
 }

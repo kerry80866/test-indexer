@@ -54,11 +54,10 @@ type AdaptedTx struct {
 	// 扁平结构可直接顺序遍历，便于事件解析器基于游标消费多条组合指令（如 swap + transfer）。
 	Instructions []*AdaptedInstruction
 
-	// LogMessages 表示交易执行过程中产生的 Program 日志，来源于 Geyser 插件或 RPC Trace。
+	// LogMessages 表示交易执行过程中产生的 Program 日志。
 	// 用途说明：
 	// 1. 并非所有协议依赖 logs，当前仅 Pump.fun、Mango 等协议需要从 logs 中提取成交价格或内部转账等事件信息。
 	// 2. 日志会在交易适配（Adapt）阶段统一挂载，事件解析阶段可按需使用。
-	// 3. 为避免对主流协议造成额外性能负担，建议仅在确实需要时解析 logs，避免不必要的正则提取与字符串扫描。
 	LogMessages []string
 
 	// 涉及 Token 账户的余额变更（SPL Token 转账与扣款）

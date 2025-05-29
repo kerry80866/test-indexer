@@ -5,7 +5,6 @@ import (
 	"dex-indexer-sol/internal/types"
 	"encoding/binary"
 	sdktoken "github.com/blocto/solana-go-sdk/program/token"
-	"github.com/mr-tron/base58"
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -60,7 +59,7 @@ func ParseTransferInstruction(ctx *ParserContext, ix *core.AdaptedInstruction) (
 		destInfo, ok2 := ctx.Balances[ix.Accounts[1]]
 		if !ok1 || !ok2 {
 			logx.Errorf("[Transfer] tx=%s: balance missing src=%s ok=%v dest=%s ok=%v",
-				base58.Encode(ctx.TxHash), ix.Accounts[0], ok1, ix.Accounts[1], ok2)
+				ctx.TxHashString(), ix.Accounts[0], ok1, ix.Accounts[1], ok2)
 			return nil, false
 		}
 		return &ParsedTransfer{
@@ -85,12 +84,12 @@ func ParseTransferInstruction(ctx *ParserContext, ix *core.AdaptedInstruction) (
 		destInfo, ok2 := ctx.Balances[ix.Accounts[2]]
 		if !ok1 || !ok2 {
 			logx.Errorf("[TransferChecked] tx=%s: balance missing src=%s ok=%v dest=%s ok=%v",
-				base58.Encode(ctx.TxHash), ix.Accounts[0], ok1, ix.Accounts[2], ok2)
+				ctx.TxHashString(), ix.Accounts[0], ok1, ix.Accounts[2], ok2)
 			return nil, false
 		}
 		if srcInfo.Token != ix.Accounts[1] {
 			logx.Errorf("[TransferChecked] tx=%s: mint mismatch, balance.token=%s, ix.mint=%s (account=%s)",
-				base58.Encode(ctx.TxHash), srcInfo.Token, ix.Accounts[1], ix.Accounts[0])
+				ctx.TxHashString(), srcInfo.Token, ix.Accounts[1], ix.Accounts[0])
 		}
 		return &ParsedTransfer{
 			Token:           srcInfo.Token,
@@ -121,12 +120,12 @@ func ParseMintToInstruction(ctx *ParserContext, ix *core.AdaptedInstruction) (*P
 	info, ok := ctx.Balances[ix.Accounts[1]]
 	if !ok {
 		logx.Errorf("[MintTo] tx=%s: dest_token_account missing: %s",
-			base58.Encode(ctx.TxHash), ix.Accounts[1])
+			ctx.TxHashString(), ix.Accounts[1])
 		return nil, false
 	}
 	if info.Token != ix.Accounts[0] {
 		logx.Errorf("[MintTo] tx=%s: mint mismatch, balance.token=%s, ix.mint=%s (account=%s)",
-			base58.Encode(ctx.TxHash), info.Token, ix.Accounts[0], ix.Accounts[1])
+			ctx.TxHashString(), info.Token, ix.Accounts[0], ix.Accounts[1])
 	}
 	return &ParsedMintTo{
 		Token:           ix.Accounts[0], // Accounts[0]更贴近指令定义，因此mintTo更倾向于Accounts[0],而不是info.Token
@@ -152,12 +151,12 @@ func ParseBurnInstruction(ctx *ParserContext, ix *core.AdaptedInstruction) (*Par
 	info, ok := ctx.Balances[ix.Accounts[0]]
 	if !ok {
 		logx.Errorf("[Burn] tx=%s: src_token_account missing: %s",
-			base58.Encode(ctx.TxHash), ix.Accounts[0])
+			ctx.TxHashString(), ix.Accounts[0])
 		return nil, false
 	}
 	if info.Token != ix.Accounts[1] {
 		logx.Errorf("[Burn] tx=%s: mint mismatch, balance.token=%s, ix.mint=%s (account=%s)",
-			base58.Encode(ctx.TxHash), info.Token, ix.Accounts[1], ix.Accounts[0])
+			ctx.TxHashString(), info.Token, ix.Accounts[1], ix.Accounts[0])
 	}
 	return &ParsedBurn{
 		Token:          info.Token,

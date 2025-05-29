@@ -3,6 +3,7 @@ package common
 import (
 	"dex-indexer-sol/internal/logic/core"
 	"dex-indexer-sol/internal/types"
+	"github.com/mr-tron/base58"
 )
 
 // ParserContext 是传入每个事件 handler 的解析上下文。
@@ -18,6 +19,10 @@ type ParserContext struct {
 
 	LogMessages []string                            // tx.Meta.LogMessages，用于部分协议日志判定
 	Balances    map[types.Pubkey]*core.TokenBalance // tokenAccount → TokenBalance
+}
+
+func (ctx *ParserContext) TxHashString() string {
+	return base58.Encode(ctx.TxHash[:])
 }
 
 // InstructionHandler 定义了统一的事件指令解析函数签名。
