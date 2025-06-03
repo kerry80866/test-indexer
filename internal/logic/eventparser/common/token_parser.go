@@ -1,11 +1,11 @@
 package common
 
 import (
+	"dex-indexer-sol/internal/logger"
 	"dex-indexer-sol/internal/logic/core"
 	"dex-indexer-sol/internal/types"
 	"encoding/binary"
 	sdktoken "github.com/blocto/solana-go-sdk/program/token"
-	"github.com/zeromicro/go-zero/core/logx"
 )
 
 // 合约源代码:
@@ -58,7 +58,7 @@ func ParseTransferInstruction(ctx *ParserContext, ix *core.AdaptedInstruction) (
 		srcInfo, ok1 := ctx.Balances[ix.Accounts[0]]
 		destInfo, ok2 := ctx.Balances[ix.Accounts[1]]
 		if !ok1 || !ok2 {
-			logx.Errorf("[Transfer] tx=%s: balance missing src=%s ok=%v dest=%s ok=%v",
+			logger.Errorf("[Token::Transfer] tx=%s: balance missing src=%s ok=%v dest=%s ok=%v",
 				ctx.TxHashString(), ix.Accounts[0], ok1, ix.Accounts[1], ok2)
 			return nil, false
 		}
@@ -67,7 +67,7 @@ func ParseTransferInstruction(ctx *ParserContext, ix *core.AdaptedInstruction) (
 			SrcAccount:      ix.Accounts[0],
 			DestAccount:     ix.Accounts[1],
 			SrcWallet:       ix.Accounts[2],
-			DestWallet:      destInfo.Owner,
+			DestWallet:      destInfo.PostOwner,
 			Amount:          binary.LittleEndian.Uint64(ix.Data[1:9]),
 			Decimals:        srcInfo.Decimals,
 			SrcPostBalance:  srcInfo.PostBalance,
@@ -83,12 +83,12 @@ func ParseTransferInstruction(ctx *ParserContext, ix *core.AdaptedInstruction) (
 		srcInfo, ok1 := ctx.Balances[ix.Accounts[0]]
 		destInfo, ok2 := ctx.Balances[ix.Accounts[2]]
 		if !ok1 || !ok2 {
-			logx.Errorf("[TransferChecked] tx=%s: balance missing src=%s ok=%v dest=%s ok=%v",
+			logger.Errorf("[Token::TransferChecked] tx=%s: balance missing src=%s ok=%v dest=%s ok=%v",
 				ctx.TxHashString(), ix.Accounts[0], ok1, ix.Accounts[2], ok2)
 			return nil, false
 		}
 		if srcInfo.Token != ix.Accounts[1] {
-			logx.Errorf("[TransferChecked] tx=%s: mint mismatch, balance.token=%s, ix.mint=%s (account=%s)",
+			logger.Errorf("[Token::TransferChecked] tx=%s: mint mismatch, balance.token=%s, ix.mint=%s (account=%s)",
 				ctx.TxHashString(), srcInfo.Token, ix.Accounts[1], ix.Accounts[0])
 		}
 		return &ParsedTransfer{
@@ -96,7 +96,7 @@ func ParseTransferInstruction(ctx *ParserContext, ix *core.AdaptedInstruction) (
 			SrcAccount:      ix.Accounts[0],
 			DestAccount:     ix.Accounts[2],
 			SrcWallet:       ix.Accounts[3],
-			DestWallet:      destInfo.Owner,
+			DestWallet:      destInfo.PostOwner,
 			Amount:          binary.LittleEndian.Uint64(ix.Data[1:9]),
 			Decimals:        srcInfo.Decimals,
 			SrcPostBalance:  srcInfo.PostBalance,
@@ -119,12 +119,12 @@ func ParseMintToInstruction(ctx *ParserContext, ix *core.AdaptedInstruction) (*P
 	}
 	info, ok := ctx.Balances[ix.Accounts[1]]
 	if !ok {
-		logx.Errorf("[MintTo] tx=%s: dest_token_account missing: %s",
+		logger.Errorf("[Token::MintTo] tx=%s: dest_token_account missing: %s",
 			ctx.TxHashString(), ix.Accounts[1])
 		return nil, false
 	}
 	if info.Token != ix.Accounts[0] {
-		logx.Errorf("[MintTo] tx=%s: mint mismatch, balance.token=%s, ix.mint=%s (account=%s)",
+		logger.Errorf("[Token::MintTo] tx=%s: mint mismatch, balance.token=%s, ix.mint=%s (account=%s)",
 			ctx.TxHashString(), info.Token, ix.Accounts[0], ix.Accounts[1])
 	}
 	return &ParsedMintTo{
@@ -150,12 +150,12 @@ func ParseBurnInstruction(ctx *ParserContext, ix *core.AdaptedInstruction) (*Par
 	}
 	info, ok := ctx.Balances[ix.Accounts[0]]
 	if !ok {
-		logx.Errorf("[Burn] tx=%s: src_token_account missing: %s",
+		logger.Errorf("[Token::Burn] tx=%s: src_token_account missing: %s",
 			ctx.TxHashString(), ix.Accounts[0])
 		return nil, false
 	}
 	if info.Token != ix.Accounts[1] {
-		logx.Errorf("[Burn] tx=%s: mint mismatch, balance.token=%s, ix.mint=%s (account=%s)",
+		logger.Errorf("[Token::Burn] tx=%s: mint mismatch, balance.token=%s, ix.mint=%s (account=%s)",
 			ctx.TxHashString(), info.Token, ix.Accounts[1], ix.Accounts[0])
 	}
 	return &ParsedBurn{

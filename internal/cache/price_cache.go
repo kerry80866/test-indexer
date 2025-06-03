@@ -44,19 +44,21 @@ func (pc *PriceCache) Size() int {
 	return len(pc.history)
 }
 
-func (pc *PriceCache) GetQuotePricesAt(tokens []types.Pubkey, blockTime int64) (map[types.Pubkey]float64, bool) {
+// GetQuotePricesAt 返回指定 tokens 在 blockTime 时刻的 USD 价格列表。
+// 若任意一个 token 缺失价格，则整体返回 false。
+func (pc *PriceCache) GetQuotePricesAt(tokens []types.Pubkey, blockTime int64) ([]float64, bool) {
 	pc.mu.RLock()
 	defer pc.mu.RUnlock()
 
-	out := make(map[types.Pubkey]float64, len(tokens))
-	for _, token := range tokens {
-		if price, ok := pc.getPriceAtUnsafe(token, blockTime); ok {
-			out[token] = price
+	prices := make([]float64, len(tokens))
+	for i, token := range tokens {
+		if price, found := pc.getPriceAtUnsafe(token, blockTime); found {
+			prices[i] = price
 		} else {
 			return nil, false
 		}
 	}
-	return out, true
+	return prices, true
 }
 
 func (pc *PriceCache) GetPriceAt(token types.Pubkey, blockTime int64) (float64, bool) {

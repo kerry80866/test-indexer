@@ -315,32 +315,32 @@ func (*Event_Burn) isEvent_Event() {}
 
 func (*Event_Balance) isEvent_Event() {}
 
-// 交易事件：记录一次成交详情（Swap）
+// 交易事件（token统一表示base token）
 type TradeEvent struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
-	Type              EventType              `protobuf:"varint,1,opt,name=type,proto3,enum=pb.EventType" json:"type,omitempty"`             // 事件类型（TRADE_BUY / TRADE_SELL / TRADE_UNKNOWN）
-	EventIndex        uint32                 `protobuf:"varint,2,opt,name=event_index,json=eventIndex,proto3" json:"event_index,omitempty"` // 事件定位索引（tx_index << 16 | ix_index << 8 | inner_index）
-	Slot              uint64                 `protobuf:"varint,3,opt,name=slot,proto3" json:"slot,omitempty"`                               // 区块 slot
-	BlockTime         int64                  `protobuf:"varint,4,opt,name=block_time,json=blockTime,proto3" json:"block_time,omitempty"`    // 区块时间（Unix 秒）
-	TxHash            []byte                 `protobuf:"bytes,5,opt,name=tx_hash,json=txHash,proto3" json:"tx_hash,omitempty"`              // 交易哈希（64 字节）
-	TxFrom            []byte                 `protobuf:"bytes,6,opt,name=tx_from,json=txFrom,proto3" json:"tx_from,omitempty"`              // 发起者地址（signer）
+	Type              EventType              `protobuf:"varint,1,opt,name=type,proto3,enum=pb.EventType" json:"type,omitempty"`          // 事件类型（TRADE_BUY / TRADE_SELL / TRADE_UNKNOWN）
+	EventId           uint64                 `protobuf:"varint,2,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`       // 事件唯一ID（slot << 32 | tx_index << 16 | ix_index << 8 | inner_index）
+	Slot              uint64                 `protobuf:"varint,3,opt,name=slot,proto3" json:"slot,omitempty"`                            // 区块 slot
+	BlockTime         int64                  `protobuf:"varint,4,opt,name=block_time,json=blockTime,proto3" json:"block_time,omitempty"` // 区块时间（Unix 秒）
+	TxHash            []byte                 `protobuf:"bytes,5,opt,name=tx_hash,json=txHash,proto3" json:"tx_hash,omitempty"`           // 交易哈希（64 字节）
+	Signers           [][]byte               `protobuf:"bytes,6,rep,name=signers,proto3" json:"signers,omitempty"`                       // 签名者地址列表（通常为交易的发起者们）
 	TokenDecimals     uint32                 `protobuf:"varint,7,opt,name=token_decimals,json=tokenDecimals,proto3" json:"token_decimals,omitempty"`
 	QuoteDecimals     uint32                 `protobuf:"varint,8,opt,name=quote_decimals,json=quoteDecimals,proto3" json:"quote_decimals,omitempty"`
-	Dex               uint32                 `protobuf:"varint,9,opt,name=dex,proto3" json:"dex,omitempty"`
-	AmountUsd         float64                `protobuf:"fixed64,10,opt,name=amount_usd,json=amountUsd,proto3" json:"amount_usd,omitempty"`
-	PriceUsd          float64                `protobuf:"fixed64,11,opt,name=price_usd,json=priceUsd,proto3" json:"price_usd,omitempty"`
-	TokenAmount       uint64                 `protobuf:"varint,12,opt,name=token_amount,json=tokenAmount,proto3" json:"token_amount,omitempty"`
-	QuoteTokenAmount  uint64                 `protobuf:"varint,13,opt,name=quote_token_amount,json=quoteTokenAmount,proto3" json:"quote_token_amount,omitempty"`
-	Token             []byte                 `protobuf:"bytes,14,opt,name=token,proto3" json:"token,omitempty"`
-	QuoteToken        []byte                 `protobuf:"bytes,15,opt,name=quote_token,json=quoteToken,proto3" json:"quote_token,omitempty"`
-	PairAddress       []byte                 `protobuf:"bytes,16,opt,name=pair_address,json=pairAddress,proto3" json:"pair_address,omitempty"`
-	TokenAccount      []byte                 `protobuf:"bytes,17,opt,name=token_account,json=tokenAccount,proto3" json:"token_account,omitempty"`
-	QuoteTokenAccount []byte                 `protobuf:"bytes,18,opt,name=quote_token_account,json=quoteTokenAccount,proto3" json:"quote_token_account,omitempty"`
-	UserWallet        []byte                 `protobuf:"bytes,19,opt,name=user_wallet,json=userWallet,proto3" json:"user_wallet,omitempty"`
-	PairTokenBalance  uint64                 `protobuf:"varint,20,opt,name=pair_token_balance,json=pairTokenBalance,proto3" json:"pair_token_balance,omitempty"`
-	PairQuoteBalance  uint64                 `protobuf:"varint,21,opt,name=pair_quote_balance,json=pairQuoteBalance,proto3" json:"pair_quote_balance,omitempty"`
-	UserTokenBalance  uint64                 `protobuf:"varint,22,opt,name=user_token_balance,json=userTokenBalance,proto3" json:"user_token_balance,omitempty"`
-	UserQuoteBalance  uint64                 `protobuf:"varint,23,opt,name=user_quote_balance,json=userQuoteBalance,proto3" json:"user_quote_balance,omitempty"`
+	Dex               uint32                 `protobuf:"varint,9,opt,name=dex,proto3" json:"dex,omitempty"`                                                        // 所属 DEX 平台编号（如 1 = RaydiumV4，2 = RaydiumCLMM）
+	AmountUsd         float64                `protobuf:"fixed64,10,opt,name=amount_usd,json=amountUsd,proto3" json:"amount_usd,omitempty"`                         // 交易成交总额（单位 USD，保留浮点精度，例：159.45 表示 $159.45）
+	PriceUsd          float64                `protobuf:"fixed64,11,opt,name=price_usd,json=priceUsd,proto3" json:"price_usd,omitempty"`                            // base token 单价（单位 USD，例：100.23 表示每个 token $100.23）
+	TokenAmount       uint64                 `protobuf:"varint,12,opt,name=token_amount,json=tokenAmount,proto3" json:"token_amount,omitempty"`                    // base token 实际成交数量（原生最小单位）
+	QuoteTokenAmount  uint64                 `protobuf:"varint,13,opt,name=quote_token_amount,json=quoteTokenAmount,proto3" json:"quote_token_amount,omitempty"`   // quote token 实际成交数量（原生最小单位）
+	Token             []byte                 `protobuf:"bytes,14,opt,name=token,proto3" json:"token,omitempty"`                                                    // base token 的 mint 地址
+	QuoteToken        []byte                 `protobuf:"bytes,15,opt,name=quote_token,json=quoteToken,proto3" json:"quote_token,omitempty"`                        // quote token 的 mint 地址
+	PairAddress       []byte                 `protobuf:"bytes,16,opt,name=pair_address,json=pairAddress,proto3" json:"pair_address,omitempty"`                     // 池子地址（如 Raydium 的池子地址）
+	TokenAccount      []byte                 `protobuf:"bytes,17,opt,name=token_account,json=tokenAccount,proto3" json:"token_account,omitempty"`                  // 池子base token的账户地址
+	QuoteTokenAccount []byte                 `protobuf:"bytes,18,opt,name=quote_token_account,json=quoteTokenAccount,proto3" json:"quote_token_account,omitempty"` // 池子quote token的账户地址
+	UserWallet        []byte                 `protobuf:"bytes,19,opt,name=user_wallet,json=userWallet,proto3" json:"user_wallet,omitempty"`                        // 用户钱包地址
+	PairTokenBalance  uint64                 `protobuf:"varint,20,opt,name=pair_token_balance,json=pairTokenBalance,proto3" json:"pair_token_balance,omitempty"`   // 交易后池子base token余额
+	PairQuoteBalance  uint64                 `protobuf:"varint,21,opt,name=pair_quote_balance,json=pairQuoteBalance,proto3" json:"pair_quote_balance,omitempty"`   // 交易后池子quote token余额
+	UserTokenBalance  uint64                 `protobuf:"varint,22,opt,name=user_token_balance,json=userTokenBalance,proto3" json:"user_token_balance,omitempty"`   // 交易后用户base token余额
+	UserQuoteBalance  uint64                 `protobuf:"varint,23,opt,name=user_quote_balance,json=userQuoteBalance,proto3" json:"user_quote_balance,omitempty"`   // 交易后用户quote token余额
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -382,9 +382,9 @@ func (x *TradeEvent) GetType() EventType {
 	return EventType_UNKNOWN
 }
 
-func (x *TradeEvent) GetEventIndex() uint32 {
+func (x *TradeEvent) GetEventId() uint64 {
 	if x != nil {
-		return x.EventIndex
+		return x.EventId
 	}
 	return 0
 }
@@ -410,9 +410,9 @@ func (x *TradeEvent) GetTxHash() []byte {
 	return nil
 }
 
-func (x *TradeEvent) GetTxFrom() []byte {
+func (x *TradeEvent) GetSigners() [][]byte {
 	if x != nil {
-		return x.TxFrom
+		return x.Signers
 	}
 	return nil
 }
@@ -540,20 +540,20 @@ func (x *TradeEvent) GetUserQuoteBalance() uint64 {
 type TransferEvent struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	Type             EventType              `protobuf:"varint,1,opt,name=type,proto3,enum=pb.EventType" json:"type,omitempty"`
-	EventIndex       uint32                 `protobuf:"varint,2,opt,name=event_index,json=eventIndex,proto3" json:"event_index,omitempty"`
+	EventId          uint64                 `protobuf:"varint,2,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"` // 事件唯一ID（slot << 32 | tx_index << 16 | ix_index << 8 | inner_index）
 	Slot             uint64                 `protobuf:"varint,3,opt,name=slot,proto3" json:"slot,omitempty"`
 	BlockTime        int64                  `protobuf:"varint,4,opt,name=block_time,json=blockTime,proto3" json:"block_time,omitempty"`
 	TxHash           []byte                 `protobuf:"bytes,5,opt,name=tx_hash,json=txHash,proto3" json:"tx_hash,omitempty"`
-	TxFrom           []byte                 `protobuf:"bytes,6,opt,name=tx_from,json=txFrom,proto3" json:"tx_from,omitempty"`
-	Token            []byte                 `protobuf:"bytes,7,opt,name=token,proto3" json:"token,omitempty"`
-	SrcAccount       []byte                 `protobuf:"bytes,8,opt,name=src_account,json=srcAccount,proto3" json:"src_account,omitempty"`
-	DestAccount      []byte                 `protobuf:"bytes,9,opt,name=dest_account,json=destAccount,proto3" json:"dest_account,omitempty"`
-	SrcWallet        []byte                 `protobuf:"bytes,10,opt,name=src_wallet,json=srcWallet,proto3" json:"src_wallet,omitempty"`
-	DestWallet       []byte                 `protobuf:"bytes,11,opt,name=dest_wallet,json=destWallet,proto3" json:"dest_wallet,omitempty"`
-	Amount           uint64                 `protobuf:"varint,12,opt,name=amount,proto3" json:"amount,omitempty"`
-	Decimals         uint32                 `protobuf:"varint,13,opt,name=decimals,proto3" json:"decimals,omitempty"`
-	SrcTokenBalance  uint64                 `protobuf:"varint,14,opt,name=src_token_balance,json=srcTokenBalance,proto3" json:"src_token_balance,omitempty"`
-	DestTokenBalance uint64                 `protobuf:"varint,15,opt,name=dest_token_balance,json=destTokenBalance,proto3" json:"dest_token_balance,omitempty"`
+	Signers          [][]byte               `protobuf:"bytes,6,rep,name=signers,proto3" json:"signers,omitempty"`                                               // 签名者地址列表（通常为交易的发起者们）
+	Token            []byte                 `protobuf:"bytes,7,opt,name=token,proto3" json:"token,omitempty"`                                                   // 被转移token的mint地址
+	SrcAccount       []byte                 `protobuf:"bytes,8,opt,name=src_account,json=srcAccount,proto3" json:"src_account,omitempty"`                       // 来源 token 账户地址
+	DestAccount      []byte                 `protobuf:"bytes,9,opt,name=dest_account,json=destAccount,proto3" json:"dest_account,omitempty"`                    // 目标 token 账户地址
+	SrcWallet        []byte                 `protobuf:"bytes,10,opt,name=src_wallet,json=srcWallet,proto3" json:"src_wallet,omitempty"`                         // 来源钱包地址（为src_account的owner）
+	DestWallet       []byte                 `protobuf:"bytes,11,opt,name=dest_wallet,json=destWallet,proto3" json:"dest_wallet,omitempty"`                      // 目标钱包地址（为dest_account的owner）
+	Amount           uint64                 `protobuf:"varint,12,opt,name=amount,proto3" json:"amount,omitempty"`                                               // 转账数量（原生单位）
+	Decimals         uint32                 `protobuf:"varint,13,opt,name=decimals,proto3" json:"decimals,omitempty"`                                           // token 精度
+	SrcTokenBalance  uint64                 `protobuf:"varint,14,opt,name=src_token_balance,json=srcTokenBalance,proto3" json:"src_token_balance,omitempty"`    // 转账后，来源账户余额
+	DestTokenBalance uint64                 `protobuf:"varint,15,opt,name=dest_token_balance,json=destTokenBalance,proto3" json:"dest_token_balance,omitempty"` // 转账后，目标账户余额
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -595,9 +595,9 @@ func (x *TransferEvent) GetType() EventType {
 	return EventType_UNKNOWN
 }
 
-func (x *TransferEvent) GetEventIndex() uint32 {
+func (x *TransferEvent) GetEventId() uint64 {
 	if x != nil {
-		return x.EventIndex
+		return x.EventId
 	}
 	return 0
 }
@@ -623,9 +623,9 @@ func (x *TransferEvent) GetTxHash() []byte {
 	return nil
 }
 
-func (x *TransferEvent) GetTxFrom() []byte {
+func (x *TransferEvent) GetSigners() [][]byte {
 	if x != nil {
-		return x.TxFrom
+		return x.Signers
 	}
 	return nil
 }
@@ -693,35 +693,34 @@ func (x *TransferEvent) GetDestTokenBalance() uint64 {
 	return 0
 }
 
-// 添加/移除流动性事件
+// 添加/移除流动性事件（token统一表示base token）
 type LiquidityEvent struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	Type              EventType              `protobuf:"varint,1,opt,name=type,proto3,enum=pb.EventType" json:"type,omitempty"`
-	EventIndex        uint32                 `protobuf:"varint,2,opt,name=event_index,json=eventIndex,proto3" json:"event_index,omitempty"`
-	Slot              uint64                 `protobuf:"varint,3,opt,name=slot,proto3" json:"slot,omitempty"`
-	BlockTime         int64                  `protobuf:"varint,4,opt,name=block_time,json=blockTime,proto3" json:"block_time,omitempty"`
-	TxHash            []byte                 `protobuf:"bytes,5,opt,name=tx_hash,json=txHash,proto3" json:"tx_hash,omitempty"`
-	TxFrom            []byte                 `protobuf:"bytes,6,opt,name=tx_from,json=txFrom,proto3" json:"tx_from,omitempty"`
-	UserWallet        []byte                 `protobuf:"bytes,7,opt,name=user_wallet,json=userWallet,proto3" json:"user_wallet,omitempty"`
-	TokenDecimals     uint32                 `protobuf:"varint,8,opt,name=token_decimals,json=tokenDecimals,proto3" json:"token_decimals,omitempty"`
-	QuoteDecimals     uint32                 `protobuf:"varint,9,opt,name=quote_decimals,json=quoteDecimals,proto3" json:"quote_decimals,omitempty"`
-	Dex               uint32                 `protobuf:"varint,10,opt,name=dex,proto3" json:"dex,omitempty"`
-	TokenAmount       uint64                 `protobuf:"varint,11,opt,name=token_amount,json=tokenAmount,proto3" json:"token_amount,omitempty"`
-	QuoteTokenAmount  uint64                 `protobuf:"varint,12,opt,name=quote_token_amount,json=quoteTokenAmount,proto3" json:"quote_token_amount,omitempty"`
-	Token             []byte                 `protobuf:"bytes,13,opt,name=token,proto3" json:"token,omitempty"`
-	QuoteToken        []byte                 `protobuf:"bytes,14,opt,name=quote_token,json=quoteToken,proto3" json:"quote_token,omitempty"`
-	PairAddress       []byte                 `protobuf:"bytes,15,opt,name=pair_address,json=pairAddress,proto3" json:"pair_address,omitempty"`
-	TokenAccount      []byte                 `protobuf:"bytes,16,opt,name=token_account,json=tokenAccount,proto3" json:"token_account,omitempty"`
-	QuoteTokenAccount []byte                 `protobuf:"bytes,17,opt,name=quote_token_account,json=quoteTokenAccount,proto3" json:"quote_token_account,omitempty"`
-	LpToken           []byte                 `protobuf:"bytes,18,opt,name=lp_token,json=lpToken,proto3" json:"lp_token,omitempty"`
-	LpAmount          uint64                 `protobuf:"varint,19,opt,name=lp_amount,json=lpAmount,proto3" json:"lp_amount,omitempty"`
-	LpDecimals        uint32                 `protobuf:"varint,20,opt,name=lp_decimals,json=lpDecimals,proto3" json:"lp_decimals,omitempty"`
-	PairTokenBalance  uint64                 `protobuf:"varint,21,opt,name=pair_token_balance,json=pairTokenBalance,proto3" json:"pair_token_balance,omitempty"`
-	PairQuoteBalance  uint64                 `protobuf:"varint,22,opt,name=pair_quote_balance,json=pairQuoteBalance,proto3" json:"pair_quote_balance,omitempty"`
-	UserTokenBalance  uint64                 `protobuf:"varint,23,opt,name=user_token_balance,json=userTokenBalance,proto3" json:"user_token_balance,omitempty"`
-	UserQuoteBalance  uint64                 `protobuf:"varint,24,opt,name=user_quote_balance,json=userQuoteBalance,proto3" json:"user_quote_balance,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	Type                   EventType              `protobuf:"varint,1,opt,name=type,proto3,enum=pb.EventType" json:"type,omitempty"`                                                     // 事件类型，如 AddLiquidity、RemoveLiquidity 等
+	EventId                uint64                 `protobuf:"varint,2,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`                                                  // 事件唯一ID（slot << 32 | tx_index << 16 | ix_index << 8 | inner_index）
+	Slot                   uint64                 `protobuf:"varint,3,opt,name=slot,proto3" json:"slot,omitempty"`                                                                       // 区块 Slot 高度
+	BlockTime              int64                  `protobuf:"varint,4,opt,name=block_time,json=blockTime,proto3" json:"block_time,omitempty"`                                            // 区块时间戳（秒级）
+	TxHash                 []byte                 `protobuf:"bytes,5,opt,name=tx_hash,json=txHash,proto3" json:"tx_hash,omitempty"`                                                      // 交易哈希
+	Signers                [][]byte               `protobuf:"bytes,6,rep,name=signers,proto3" json:"signers,omitempty"`                                                                  // 签名者地址列表（通常为交易的发起者们）
+	UserWallet             []byte                 `protobuf:"bytes,7,opt,name=user_wallet,json=userWallet,proto3" json:"user_wallet,omitempty"`                                          // 用户钱包地址（通常与 signers 一致）
+	TokenDecimals          uint32                 `protobuf:"varint,8,opt,name=token_decimals,json=tokenDecimals,proto3" json:"token_decimals,omitempty"`                                // token（即 base token）的精度
+	QuoteDecimals          uint32                 `protobuf:"varint,9,opt,name=quote_decimals,json=quoteDecimals,proto3" json:"quote_decimals,omitempty"`                                // quote token 的精度
+	Dex                    uint32                 `protobuf:"varint,10,opt,name=dex,proto3" json:"dex,omitempty"`                                                                        // 所属 DEX 平台编号（例如 Raydium = 1）
+	TokenAmount            uint64                 `protobuf:"varint,11,opt,name=token_amount,json=tokenAmount,proto3" json:"token_amount,omitempty"`                                     // token 添加/移除的数量（base token）
+	QuoteTokenAmount       uint64                 `protobuf:"varint,12,opt,name=quote_token_amount,json=quoteTokenAmount,proto3" json:"quote_token_amount,omitempty"`                    // quote token 添加/移除的数量
+	Token                  []byte                 `protobuf:"bytes,13,opt,name=token,proto3" json:"token,omitempty"`                                                                     // token 的 mint 地址（base token）
+	QuoteToken             []byte                 `protobuf:"bytes,14,opt,name=quote_token,json=quoteToken,proto3" json:"quote_token,omitempty"`                                         // quote token 的 mint 地址
+	PairAddress            []byte                 `protobuf:"bytes,15,opt,name=pair_address,json=pairAddress,proto3" json:"pair_address,omitempty"`                                      // 池子地址（如 AMM 池或交易对地址）
+	TokenAccount           []byte                 `protobuf:"bytes,16,opt,name=token_account,json=tokenAccount,proto3" json:"token_account,omitempty"`                                   // 池子中 token 的账户地址
+	QuoteTokenAccount      []byte                 `protobuf:"bytes,17,opt,name=quote_token_account,json=quoteTokenAccount,proto3" json:"quote_token_account,omitempty"`                  // 池子中 quote token 的账户地址
+	TokenAccountOwner      []byte                 `protobuf:"bytes,18,opt,name=token_account_owner,json=tokenAccountOwner,proto3" json:"token_account_owner,omitempty"`                  // 池子 token 账户的所有者
+	QuoteTokenAccountOwner []byte                 `protobuf:"bytes,19,opt,name=quote_token_account_owner,json=quoteTokenAccountOwner,proto3" json:"quote_token_account_owner,omitempty"` // 池子 quote token 账户的所有者
+	PairTokenBalance       uint64                 `protobuf:"varint,20,opt,name=pair_token_balance,json=pairTokenBalance,proto3" json:"pair_token_balance,omitempty"`                    // 当前池子中 token 的余额（base token）
+	PairQuoteBalance       uint64                 `protobuf:"varint,21,opt,name=pair_quote_balance,json=pairQuoteBalance,proto3" json:"pair_quote_balance,omitempty"`                    // 当前池子中 quote token 的余额
+	UserTokenBalance       uint64                 `protobuf:"varint,22,opt,name=user_token_balance,json=userTokenBalance,proto3" json:"user_token_balance,omitempty"`                    // 用户 token 的余额（base token）
+	UserQuoteBalance       uint64                 `protobuf:"varint,23,opt,name=user_quote_balance,json=userQuoteBalance,proto3" json:"user_quote_balance,omitempty"`                    // 用户 quote token 的余额
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *LiquidityEvent) Reset() {
@@ -761,9 +760,9 @@ func (x *LiquidityEvent) GetType() EventType {
 	return EventType_UNKNOWN
 }
 
-func (x *LiquidityEvent) GetEventIndex() uint32 {
+func (x *LiquidityEvent) GetEventId() uint64 {
 	if x != nil {
-		return x.EventIndex
+		return x.EventId
 	}
 	return 0
 }
@@ -789,9 +788,9 @@ func (x *LiquidityEvent) GetTxHash() []byte {
 	return nil
 }
 
-func (x *LiquidityEvent) GetTxFrom() []byte {
+func (x *LiquidityEvent) GetSigners() [][]byte {
 	if x != nil {
-		return x.TxFrom
+		return x.Signers
 	}
 	return nil
 }
@@ -873,25 +872,18 @@ func (x *LiquidityEvent) GetQuoteTokenAccount() []byte {
 	return nil
 }
 
-func (x *LiquidityEvent) GetLpToken() []byte {
+func (x *LiquidityEvent) GetTokenAccountOwner() []byte {
 	if x != nil {
-		return x.LpToken
+		return x.TokenAccountOwner
 	}
 	return nil
 }
 
-func (x *LiquidityEvent) GetLpAmount() uint64 {
+func (x *LiquidityEvent) GetQuoteTokenAccountOwner() []byte {
 	if x != nil {
-		return x.LpAmount
+		return x.QuoteTokenAccountOwner
 	}
-	return 0
-}
-
-func (x *LiquidityEvent) GetLpDecimals() uint32 {
-	if x != nil {
-		return x.LpDecimals
-	}
-	return 0
+	return nil
 }
 
 func (x *LiquidityEvent) GetPairTokenBalance() uint64 {
@@ -925,18 +917,18 @@ func (x *LiquidityEvent) GetUserQuoteBalance() uint64 {
 // 铸币事件
 type MintToEvent struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
-	Type           EventType              `protobuf:"varint,1,opt,name=type,proto3,enum=pb.EventType" json:"type,omitempty"`
-	EventIndex     uint32                 `protobuf:"varint,2,opt,name=event_index,json=eventIndex,proto3" json:"event_index,omitempty"`
-	Slot           uint64                 `protobuf:"varint,3,opt,name=slot,proto3" json:"slot,omitempty"`
-	BlockTime      int64                  `protobuf:"varint,4,opt,name=block_time,json=blockTime,proto3" json:"block_time,omitempty"`
-	TxHash         []byte                 `protobuf:"bytes,5,opt,name=tx_hash,json=txHash,proto3" json:"tx_hash,omitempty"`
-	TxFrom         []byte                 `protobuf:"bytes,6,opt,name=tx_from,json=txFrom,proto3" json:"tx_from,omitempty"`
-	Token          []byte                 `protobuf:"bytes,7,opt,name=token,proto3" json:"token,omitempty"`
-	ToAddress      []byte                 `protobuf:"bytes,8,opt,name=to_address,json=toAddress,proto3" json:"to_address,omitempty"`
-	ToTokenAccount []byte                 `protobuf:"bytes,9,opt,name=to_token_account,json=toTokenAccount,proto3" json:"to_token_account,omitempty"`
-	Amount         uint64                 `protobuf:"varint,10,opt,name=amount,proto3" json:"amount,omitempty"`
-	Decimals       uint32                 `protobuf:"varint,11,opt,name=decimals,proto3" json:"decimals,omitempty"`
-	ToTokenBalance uint64                 `protobuf:"varint,12,opt,name=to_token_balance,json=toTokenBalance,proto3" json:"to_token_balance,omitempty"`
+	Type           EventType              `protobuf:"varint,1,opt,name=type,proto3,enum=pb.EventType" json:"type,omitempty"`                            // 事件类型（MINT_TO）
+	EventId        uint64                 `protobuf:"varint,2,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`                         // 事件唯一ID（slot << 32 | tx_index << 16 | ix_index << 8 | inner_index）
+	Slot           uint64                 `protobuf:"varint,3,opt,name=slot,proto3" json:"slot,omitempty"`                                              // 区块 slot
+	BlockTime      int64                  `protobuf:"varint,4,opt,name=block_time,json=blockTime,proto3" json:"block_time,omitempty"`                   // 区块时间（Unix 秒）
+	TxHash         []byte                 `protobuf:"bytes,5,opt,name=tx_hash,json=txHash,proto3" json:"tx_hash,omitempty"`                             // 交易哈希
+	Signers        [][]byte               `protobuf:"bytes,6,rep,name=signers,proto3" json:"signers,omitempty"`                                         // 签名者地址列表（通常为交易的发起者们）
+	Token          []byte                 `protobuf:"bytes,7,opt,name=token,proto3" json:"token,omitempty"`                                             // 被铸造 token 的 mint 地址
+	ToAddress      []byte                 `protobuf:"bytes,8,opt,name=to_address,json=toAddress,proto3" json:"to_address,omitempty"`                    // 接收者钱包地址
+	ToTokenAccount []byte                 `protobuf:"bytes,9,opt,name=to_token_account,json=toTokenAccount,proto3" json:"to_token_account,omitempty"`   // 接收者 token account 地址
+	Amount         uint64                 `protobuf:"varint,10,opt,name=amount,proto3" json:"amount,omitempty"`                                         // 铸造的数量（原生单位）
+	Decimals       uint32                 `protobuf:"varint,11,opt,name=decimals,proto3" json:"decimals,omitempty"`                                     // token 精度
+	ToTokenBalance uint64                 `protobuf:"varint,12,opt,name=to_token_balance,json=toTokenBalance,proto3" json:"to_token_balance,omitempty"` // 铸造后的 token account 余额
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -978,9 +970,9 @@ func (x *MintToEvent) GetType() EventType {
 	return EventType_UNKNOWN
 }
 
-func (x *MintToEvent) GetEventIndex() uint32 {
+func (x *MintToEvent) GetEventId() uint64 {
 	if x != nil {
-		return x.EventIndex
+		return x.EventId
 	}
 	return 0
 }
@@ -1006,9 +998,9 @@ func (x *MintToEvent) GetTxHash() []byte {
 	return nil
 }
 
-func (x *MintToEvent) GetTxFrom() []byte {
+func (x *MintToEvent) GetSigners() [][]byte {
 	if x != nil {
-		return x.TxFrom
+		return x.Signers
 	}
 	return nil
 }
@@ -1058,18 +1050,18 @@ func (x *MintToEvent) GetToTokenBalance() uint64 {
 // 销毁事件
 type BurnEvent struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
-	Type             EventType              `protobuf:"varint,1,opt,name=type,proto3,enum=pb.EventType" json:"type,omitempty"`
-	EventIndex       uint32                 `protobuf:"varint,2,opt,name=event_index,json=eventIndex,proto3" json:"event_index,omitempty"`
-	Slot             uint64                 `protobuf:"varint,3,opt,name=slot,proto3" json:"slot,omitempty"`
-	BlockTime        int64                  `protobuf:"varint,4,opt,name=block_time,json=blockTime,proto3" json:"block_time,omitempty"`
-	TxHash           []byte                 `protobuf:"bytes,5,opt,name=tx_hash,json=txHash,proto3" json:"tx_hash,omitempty"`
-	TxFrom           []byte                 `protobuf:"bytes,6,opt,name=tx_from,json=txFrom,proto3" json:"tx_from,omitempty"`
-	Token            []byte                 `protobuf:"bytes,7,opt,name=token,proto3" json:"token,omitempty"`
-	FromAddress      []byte                 `protobuf:"bytes,8,opt,name=from_address,json=fromAddress,proto3" json:"from_address,omitempty"`
-	FromTokenAccount []byte                 `protobuf:"bytes,9,opt,name=from_token_account,json=fromTokenAccount,proto3" json:"from_token_account,omitempty"`
-	Amount           uint64                 `protobuf:"varint,10,opt,name=amount,proto3" json:"amount,omitempty"`
-	Decimals         uint32                 `protobuf:"varint,11,opt,name=decimals,proto3" json:"decimals,omitempty"`
-	FromTokenBalance uint64                 `protobuf:"varint,12,opt,name=from_token_balance,json=fromTokenBalance,proto3" json:"from_token_balance,omitempty"`
+	Type             EventType              `protobuf:"varint,1,opt,name=type,proto3,enum=pb.EventType" json:"type,omitempty"`                                  // 事件类型（BURN）
+	EventId          uint64                 `protobuf:"varint,2,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`                               // 事件唯一ID（slot << 32 | tx_index << 16 | ix_index << 8 | inner_index）
+	Slot             uint64                 `protobuf:"varint,3,opt,name=slot,proto3" json:"slot,omitempty"`                                                    // 区块 slot
+	BlockTime        int64                  `protobuf:"varint,4,opt,name=block_time,json=blockTime,proto3" json:"block_time,omitempty"`                         // 区块时间（Unix 秒）
+	TxHash           []byte                 `protobuf:"bytes,5,opt,name=tx_hash,json=txHash,proto3" json:"tx_hash,omitempty"`                                   // 交易哈希
+	Signers          [][]byte               `protobuf:"bytes,6,rep,name=signers,proto3" json:"signers,omitempty"`                                               // 签名者地址列表（通常为交易的发起者们）
+	Token            []byte                 `protobuf:"bytes,7,opt,name=token,proto3" json:"token,omitempty"`                                                   // 被销毁 token 的 mint 地址
+	FromAddress      []byte                 `protobuf:"bytes,8,opt,name=from_address,json=fromAddress,proto3" json:"from_address,omitempty"`                    // 发起者钱包地址
+	FromTokenAccount []byte                 `protobuf:"bytes,9,opt,name=from_token_account,json=fromTokenAccount,proto3" json:"from_token_account,omitempty"`   // 销毁操作的 token account 地址
+	Amount           uint64                 `protobuf:"varint,10,opt,name=amount,proto3" json:"amount,omitempty"`                                               // 被销毁的数量（原生单位）
+	Decimals         uint32                 `protobuf:"varint,11,opt,name=decimals,proto3" json:"decimals,omitempty"`                                           // token 精度
+	FromTokenBalance uint64                 `protobuf:"varint,12,opt,name=from_token_balance,json=fromTokenBalance,proto3" json:"from_token_balance,omitempty"` // 销毁后的 token account 余额
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -1111,9 +1103,9 @@ func (x *BurnEvent) GetType() EventType {
 	return EventType_UNKNOWN
 }
 
-func (x *BurnEvent) GetEventIndex() uint32 {
+func (x *BurnEvent) GetEventId() uint64 {
 	if x != nil {
-		return x.EventIndex
+		return x.EventId
 	}
 	return 0
 }
@@ -1139,9 +1131,9 @@ func (x *BurnEvent) GetTxHash() []byte {
 	return nil
 }
 
-func (x *BurnEvent) GetTxFrom() []byte {
+func (x *BurnEvent) GetSigners() [][]byte {
 	if x != nil {
-		return x.TxFrom
+		return x.Signers
 	}
 	return nil
 }
@@ -1192,7 +1184,7 @@ func (x *BurnEvent) GetFromTokenBalance() uint64 {
 type BalanceUpdateEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Type          EventType              `protobuf:"varint,1,opt,name=type,proto3,enum=pb.EventType" json:"type,omitempty"`                // 事件类型（BALANCE_UPDATE）
-	TxIndex       uint32                 `protobuf:"varint,2,opt,name=tx_index,json=txIndex,proto3" json:"tx_index,omitempty"`             // tx索引
+	EventId       uint64                 `protobuf:"varint,2,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`             // 事件唯一ID（slot << 32 | tx_index << 16 | inner_index）
 	Slot          uint64                 `protobuf:"varint,3,opt,name=slot,proto3" json:"slot,omitempty"`                                  // 区块 slot
 	BlockTime     int64                  `protobuf:"varint,4,opt,name=block_time,json=blockTime,proto3" json:"block_time,omitempty"`       // 区块时间（Unix 秒级时间戳）
 	Token         []byte                 `protobuf:"bytes,5,opt,name=token,proto3" json:"token,omitempty"`                                 // token mint 地址
@@ -1242,9 +1234,9 @@ func (x *BalanceUpdateEvent) GetType() EventType {
 	return EventType_UNKNOWN
 }
 
-func (x *BalanceUpdateEvent) GetTxIndex() uint32 {
+func (x *BalanceUpdateEvent) GetEventId() uint64 {
 	if x != nil {
-		return x.TxIndex
+		return x.EventId
 	}
 	return 0
 }
@@ -1323,17 +1315,16 @@ const file_event_proto_rawDesc = "" +
 	"\x04mint\x18\x04 \x01(\v2\x0f.pb.MintToEventH\x00R\x04mint\x12#\n" +
 	"\x04burn\x18\x05 \x01(\v2\r.pb.BurnEventH\x00R\x04burn\x122\n" +
 	"\abalance\x18\x06 \x01(\v2\x16.pb.BalanceUpdateEventH\x00R\abalanceB\a\n" +
-	"\x05event\"\xaa\x06\n" +
+	"\x05event\"\xa5\x06\n" +
 	"\n" +
 	"TradeEvent\x12!\n" +
-	"\x04type\x18\x01 \x01(\x0e2\r.pb.EventTypeR\x04type\x12\x1f\n" +
-	"\vevent_index\x18\x02 \x01(\rR\n" +
-	"eventIndex\x12\x12\n" +
+	"\x04type\x18\x01 \x01(\x0e2\r.pb.EventTypeR\x04type\x12\x19\n" +
+	"\bevent_id\x18\x02 \x01(\x04R\aeventId\x12\x12\n" +
 	"\x04slot\x18\x03 \x01(\x04R\x04slot\x12\x1d\n" +
 	"\n" +
 	"block_time\x18\x04 \x01(\x03R\tblockTime\x12\x17\n" +
-	"\atx_hash\x18\x05 \x01(\fR\x06txHash\x12\x17\n" +
-	"\atx_from\x18\x06 \x01(\fR\x06txFrom\x12%\n" +
+	"\atx_hash\x18\x05 \x01(\fR\x06txHash\x12\x18\n" +
+	"\asigners\x18\x06 \x03(\fR\asigners\x12%\n" +
 	"\x0etoken_decimals\x18\a \x01(\rR\rtokenDecimals\x12%\n" +
 	"\x0equote_decimals\x18\b \x01(\rR\rquoteDecimals\x12\x10\n" +
 	"\x03dex\x18\t \x01(\rR\x03dex\x12\x1d\n" +
@@ -1354,16 +1345,15 @@ const file_event_proto_rawDesc = "" +
 	"\x12pair_token_balance\x18\x14 \x01(\x04R\x10pairTokenBalance\x12,\n" +
 	"\x12pair_quote_balance\x18\x15 \x01(\x04R\x10pairQuoteBalance\x12,\n" +
 	"\x12user_token_balance\x18\x16 \x01(\x04R\x10userTokenBalance\x12,\n" +
-	"\x12user_quote_balance\x18\x17 \x01(\x04R\x10userQuoteBalance\"\xe0\x03\n" +
+	"\x12user_quote_balance\x18\x17 \x01(\x04R\x10userQuoteBalance\"\xdb\x03\n" +
 	"\rTransferEvent\x12!\n" +
-	"\x04type\x18\x01 \x01(\x0e2\r.pb.EventTypeR\x04type\x12\x1f\n" +
-	"\vevent_index\x18\x02 \x01(\rR\n" +
-	"eventIndex\x12\x12\n" +
+	"\x04type\x18\x01 \x01(\x0e2\r.pb.EventTypeR\x04type\x12\x19\n" +
+	"\bevent_id\x18\x02 \x01(\x04R\aeventId\x12\x12\n" +
 	"\x04slot\x18\x03 \x01(\x04R\x04slot\x12\x1d\n" +
 	"\n" +
 	"block_time\x18\x04 \x01(\x03R\tblockTime\x12\x17\n" +
-	"\atx_hash\x18\x05 \x01(\fR\x06txHash\x12\x17\n" +
-	"\atx_from\x18\x06 \x01(\fR\x06txFrom\x12\x14\n" +
+	"\atx_hash\x18\x05 \x01(\fR\x06txHash\x12\x18\n" +
+	"\asigners\x18\x06 \x03(\fR\asigners\x12\x14\n" +
 	"\x05token\x18\a \x01(\fR\x05token\x12\x1f\n" +
 	"\vsrc_account\x18\b \x01(\fR\n" +
 	"srcAccount\x12!\n" +
@@ -1376,16 +1366,15 @@ const file_event_proto_rawDesc = "" +
 	"\x06amount\x18\f \x01(\x04R\x06amount\x12\x1a\n" +
 	"\bdecimals\x18\r \x01(\rR\bdecimals\x12*\n" +
 	"\x11src_token_balance\x18\x0e \x01(\x04R\x0fsrcTokenBalance\x12,\n" +
-	"\x12dest_token_balance\x18\x0f \x01(\x04R\x10destTokenBalance\"\xcb\x06\n" +
+	"\x12dest_token_balance\x18\x0f \x01(\x04R\x10destTokenBalance\"\xd8\x06\n" +
 	"\x0eLiquidityEvent\x12!\n" +
-	"\x04type\x18\x01 \x01(\x0e2\r.pb.EventTypeR\x04type\x12\x1f\n" +
-	"\vevent_index\x18\x02 \x01(\rR\n" +
-	"eventIndex\x12\x12\n" +
+	"\x04type\x18\x01 \x01(\x0e2\r.pb.EventTypeR\x04type\x12\x19\n" +
+	"\bevent_id\x18\x02 \x01(\x04R\aeventId\x12\x12\n" +
 	"\x04slot\x18\x03 \x01(\x04R\x04slot\x12\x1d\n" +
 	"\n" +
 	"block_time\x18\x04 \x01(\x03R\tblockTime\x12\x17\n" +
-	"\atx_hash\x18\x05 \x01(\fR\x06txHash\x12\x17\n" +
-	"\atx_from\x18\x06 \x01(\fR\x06txFrom\x12\x1f\n" +
+	"\atx_hash\x18\x05 \x01(\fR\x06txHash\x12\x18\n" +
+	"\asigners\x18\x06 \x03(\fR\asigners\x12\x1f\n" +
 	"\vuser_wallet\x18\a \x01(\fR\n" +
 	"userWallet\x12%\n" +
 	"\x0etoken_decimals\x18\b \x01(\rR\rtokenDecimals\x12%\n" +
@@ -1399,24 +1388,21 @@ const file_event_proto_rawDesc = "" +
 	"quoteToken\x12!\n" +
 	"\fpair_address\x18\x0f \x01(\fR\vpairAddress\x12#\n" +
 	"\rtoken_account\x18\x10 \x01(\fR\ftokenAccount\x12.\n" +
-	"\x13quote_token_account\x18\x11 \x01(\fR\x11quoteTokenAccount\x12\x19\n" +
-	"\blp_token\x18\x12 \x01(\fR\alpToken\x12\x1b\n" +
-	"\tlp_amount\x18\x13 \x01(\x04R\blpAmount\x12\x1f\n" +
-	"\vlp_decimals\x18\x14 \x01(\rR\n" +
-	"lpDecimals\x12,\n" +
-	"\x12pair_token_balance\x18\x15 \x01(\x04R\x10pairTokenBalance\x12,\n" +
-	"\x12pair_quote_balance\x18\x16 \x01(\x04R\x10pairQuoteBalance\x12,\n" +
-	"\x12user_token_balance\x18\x17 \x01(\x04R\x10userTokenBalance\x12,\n" +
-	"\x12user_quote_balance\x18\x18 \x01(\x04R\x10userQuoteBalance\"\xf3\x02\n" +
+	"\x13quote_token_account\x18\x11 \x01(\fR\x11quoteTokenAccount\x12.\n" +
+	"\x13token_account_owner\x18\x12 \x01(\fR\x11tokenAccountOwner\x129\n" +
+	"\x19quote_token_account_owner\x18\x13 \x01(\fR\x16quoteTokenAccountOwner\x12,\n" +
+	"\x12pair_token_balance\x18\x14 \x01(\x04R\x10pairTokenBalance\x12,\n" +
+	"\x12pair_quote_balance\x18\x15 \x01(\x04R\x10pairQuoteBalance\x12,\n" +
+	"\x12user_token_balance\x18\x16 \x01(\x04R\x10userTokenBalance\x12,\n" +
+	"\x12user_quote_balance\x18\x17 \x01(\x04R\x10userQuoteBalance\"\xee\x02\n" +
 	"\vMintToEvent\x12!\n" +
-	"\x04type\x18\x01 \x01(\x0e2\r.pb.EventTypeR\x04type\x12\x1f\n" +
-	"\vevent_index\x18\x02 \x01(\rR\n" +
-	"eventIndex\x12\x12\n" +
+	"\x04type\x18\x01 \x01(\x0e2\r.pb.EventTypeR\x04type\x12\x19\n" +
+	"\bevent_id\x18\x02 \x01(\x04R\aeventId\x12\x12\n" +
 	"\x04slot\x18\x03 \x01(\x04R\x04slot\x12\x1d\n" +
 	"\n" +
 	"block_time\x18\x04 \x01(\x03R\tblockTime\x12\x17\n" +
-	"\atx_hash\x18\x05 \x01(\fR\x06txHash\x12\x17\n" +
-	"\atx_from\x18\x06 \x01(\fR\x06txFrom\x12\x14\n" +
+	"\atx_hash\x18\x05 \x01(\fR\x06txHash\x12\x18\n" +
+	"\asigners\x18\x06 \x03(\fR\asigners\x12\x14\n" +
 	"\x05token\x18\a \x01(\fR\x05token\x12\x1d\n" +
 	"\n" +
 	"to_address\x18\b \x01(\fR\ttoAddress\x12(\n" +
@@ -1424,16 +1410,15 @@ const file_event_proto_rawDesc = "" +
 	"\x06amount\x18\n" +
 	" \x01(\x04R\x06amount\x12\x1a\n" +
 	"\bdecimals\x18\v \x01(\rR\bdecimals\x12(\n" +
-	"\x10to_token_balance\x18\f \x01(\x04R\x0etoTokenBalance\"\xfd\x02\n" +
+	"\x10to_token_balance\x18\f \x01(\x04R\x0etoTokenBalance\"\xf8\x02\n" +
 	"\tBurnEvent\x12!\n" +
-	"\x04type\x18\x01 \x01(\x0e2\r.pb.EventTypeR\x04type\x12\x1f\n" +
-	"\vevent_index\x18\x02 \x01(\rR\n" +
-	"eventIndex\x12\x12\n" +
+	"\x04type\x18\x01 \x01(\x0e2\r.pb.EventTypeR\x04type\x12\x19\n" +
+	"\bevent_id\x18\x02 \x01(\x04R\aeventId\x12\x12\n" +
 	"\x04slot\x18\x03 \x01(\x04R\x04slot\x12\x1d\n" +
 	"\n" +
 	"block_time\x18\x04 \x01(\x03R\tblockTime\x12\x17\n" +
-	"\atx_hash\x18\x05 \x01(\fR\x06txHash\x12\x17\n" +
-	"\atx_from\x18\x06 \x01(\fR\x06txFrom\x12\x14\n" +
+	"\atx_hash\x18\x05 \x01(\fR\x06txHash\x12\x18\n" +
+	"\asigners\x18\x06 \x03(\fR\asigners\x12\x14\n" +
 	"\x05token\x18\a \x01(\fR\x05token\x12!\n" +
 	"\ffrom_address\x18\b \x01(\fR\vfromAddress\x12,\n" +
 	"\x12from_token_account\x18\t \x01(\fR\x10fromTokenAccount\x12\x16\n" +
@@ -1443,7 +1428,7 @@ const file_event_proto_rawDesc = "" +
 	"\x12from_token_balance\x18\f \x01(\x04R\x10fromTokenBalance\"\xab\x02\n" +
 	"\x12BalanceUpdateEvent\x12!\n" +
 	"\x04type\x18\x01 \x01(\x0e2\r.pb.EventTypeR\x04type\x12\x19\n" +
-	"\btx_index\x18\x02 \x01(\rR\atxIndex\x12\x12\n" +
+	"\bevent_id\x18\x02 \x01(\x04R\aeventId\x12\x12\n" +
 	"\x04slot\x18\x03 \x01(\x04R\x04slot\x12\x1d\n" +
 	"\n" +
 	"block_time\x18\x04 \x01(\x03R\tblockTime\x12\x14\n" +

@@ -20,11 +20,11 @@ func extractTokenBurnEvent(
 
 	event := pb.BurnEvent{
 		Type:             pb.EventType_BURN,
-		EventIndex:       core.BuildEventID(ctx.TxIndex, ix.IxIndex, ix.InnerIndex),
+		EventId:          core.BuildEventID(ctx.Slot, ctx.TxIndex, ix.IxIndex, ix.InnerIndex),
 		Slot:             ctx.Slot,
 		BlockTime:        ctx.BlockTime,
 		TxHash:           ctx.TxHash,
-		TxFrom:           ctx.TxFrom,
+		Signers:          ctx.Signers,
 		Token:            parsedBurn.Token[:],
 		FromTokenAccount: parsedBurn.SrcAccount[:],
 		FromAddress:      parsedBurn.SrcWallet[:], // TokenAccount 的 owner
@@ -34,7 +34,7 @@ func extractTokenBurnEvent(
 	}
 
 	return &core.Event{
-		ID:        event.EventIndex,   // 唯一事件 ID（txIndex + ixIndex + innerIndex）
+		ID:        event.EventId,
 		EventType: uint32(event.Type), // EventType = BURN
 		Key:       event.Token,        // 分区 key，可按 token 拆分
 		Event: &pb.Event{

@@ -3,9 +3,9 @@ package mq
 import (
 	"context"
 	"dex-indexer-sol/internal/config"
+	"dex-indexer-sol/internal/logger"
 	"dex-indexer-sol/internal/utils"
 	"fmt"
-	"github.com/zeromicro/go-zero/core/logx"
 	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
@@ -37,11 +37,12 @@ func NewKafkaProducer(cfg config.KafkaProducerConfig) (*kafka.Producer, error) {
 	}
 	brokerCount := len(meta.Brokers)
 
+	// replicationFactor 是 Kafka 主题（Topic）中每个分区（Partition）副本的数量
 	replicationFactor := 1
 	if brokerCount > 1 {
 		replicationFactor = 2
 	}
-	logx.Infof("Kafka broker count = %d, using replication factor = %d", brokerCount, replicationFactor)
+	logger.Infof("[mq] Kafka broker count = %d, using replication factor = %d", brokerCount, replicationFactor)
 
 	// 检查需要创建的 topic
 	var topicsToCreate []kafka.TopicSpecification

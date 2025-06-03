@@ -3,11 +3,11 @@ package service
 import (
 	"context"
 	"dex-indexer-sol/internal/config"
+	"dex-indexer-sol/internal/logger"
 	"dex-indexer-sol/internal/types"
 	"dex-indexer-sol/internal/utils"
 	"dex-indexer-sol/pb"
 	"fmt"
-	"log"
 	"time"
 
 	"dex-indexer-sol/internal/cache"
@@ -26,13 +26,14 @@ type PriceSyncService struct {
 	conn       *grpc.ClientConn // 保存连接以便在停止服务时关闭
 }
 
-func NewPriceSyncService(config *config.PriceServiceConfig, priceCache *cache.PriceCache) *PriceSyncService {
+func NewPriceSyncService(config *config.PriceServiceConfig, priceCache *cache.PriceCache) (*PriceSyncService, error) {
 	// 必须连接成功
 	dialCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	conn, err := grpc.DialContext(dialCtx, config.Endpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	cancel() // 显式取消超时上下文
 	if err != nil {
-		log.Fatalf("连接价格服务失败: %v", err)
+		logger.Errorf("[PriceSyncService] 连接价格服务失败: %v", err)
+		return nil, err
 	}
 
 	// 创建 gRPC 客户端
@@ -49,27 +50,27 @@ func NewPriceSyncService(config *config.PriceServiceConfig, priceCache *cache.Pr
 	}
 
 	// 初始化同步价格数据
-	const retryCount = 2
+	const retryCount = 3
 	var lastErr error
 
 	pubkeys := types.PubkeysFromBase58(p.tokens)
 	for i := 0; i <= retryCount; i++ {
 		if err := p.update(); err != nil {
-			log.Printf("第 %d 次 update() 失败（忽略）: %v", i+1, err)
+			logger.Warnf("[PriceSyncService] 第 %d 次 update() 失败（忽略）: %v", i+1, err)
 			lastErr = err
 		}
 
 		if _, ok := priceCache.GetQuotePricesAt(pubkeys, 0); ok {
-			log.Println("初始价格同步成功（缓存已就绪）")
-			return p
+			logger.Infof("[PriceSyncService] 初始价格同步成功（缓存已就绪）")
+			return p, nil
 		}
 
-		log.Printf("第 %d 次尝试后仍无法获取完整价格", i+1)
+		logger.Warnf("[PriceSyncService] 第 %d 次尝试后仍无法获取完整价格", i+1)
 		time.Sleep(2 * time.Second)
 	}
 
-	log.Fatalf("初始价格同步失败（%d 次尝试）: %v", retryCount+1, lastErr)
-	return nil // 满足编译器，永不执行
+	logger.Errorf("初始价格同步失败（%d 次尝试）: %v", retryCount+1, lastErr)
+	return nil, lastErr
 }
 
 func (ps *PriceSyncService) Start() {
@@ -80,7 +81,7 @@ func (ps *PriceSyncService) Start() {
 		select {
 		case <-ticker.C:
 			if err := ps.update(); err != nil {
-				log.Printf("周期性价格更新失败: %v", err)
+				logger.Warnf("[PriceSyncService] 周期性价格更新失败: %v", err)
 			}
 		case <-ps.stopChan:
 			return
@@ -116,7 +117,7 @@ func (ps *PriceSyncService) fetchPriceHistory() (map[string][]cache.TokenPricePo
 		FromTimestamp:  time.Now().Add(-ps.interval).Unix(),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("请求价格历史数据失败: %w", err)
+		return nil, fmt.Errorf("[PriceSyncService] 请求价格历史数据失败: %w", err)
 	}
 
 	result := make(map[string][]cache.TokenPricePoint)

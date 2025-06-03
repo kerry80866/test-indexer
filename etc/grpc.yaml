@@ -1,3 +1,10 @@
+# 日志配置
+LogConf:
+  Format: "json"      # 日志格式，开发环境建议使用 "console"，生产环境建议使用 "json"
+  LogDir: "./logs"    # 日志输出目录（默认 logs，可指定绝对路径）
+  Level: "debug"      # 日志级别，支持 debug/info/warn/error
+  Compress: false     # 旧日志是否压缩
+
 # GRPC特有配置
 Grpc:
   Endpoint:            # gRPC 服务端地址
@@ -18,6 +25,7 @@ Grpc:
 PriceServiceConf:
   Endpoint: "127.0.0.1:8080"
   SyncIntervalS: 60
+  WSolPrice: 160 #需要改这个配置
 
 TimeConf:
   SlotDispatchTimeoutMs: 2000       # 控制整个 slot dispatch 生命周期：发事件 + Redis + DB（毫秒）

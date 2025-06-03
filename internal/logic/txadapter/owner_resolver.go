@@ -5,32 +5,39 @@ import (
 	"dex-indexer-sol/internal/types"
 )
 
-type ownerKV struct {
-	base58 string       // 原始 owner 字符串
-	pubkey types.Pubkey // 解码后的公钥
-}
-
-// ownerResolver 解析 base58 owner 地址 → types.Pubkey，仅缓存解码结果，无 decimals。
 type ownerResolver struct {
-	cached []ownerKV
+	owners map[string]types.Pubkey // 外部传入 + 协程私有，无需加锁
 }
 
-// newOwnerResolver 创建 resolver，容量为预估 owner 数量。
-func newOwnerResolver(capacity int) *ownerResolver {
-	return &ownerResolver{cached: make([]ownerKV, 0, capacity)}
+func newOwnerResolver(owners map[string]types.Pubkey) *ownerResolver {
+	return &ownerResolver{owners: owners}
 }
 
-// resolveOwner 解码 base58 owner 字符串，命中则返回缓存值，否则解码后加入缓存。
+// resolve 解码 base58 owner 字符串，命中则返回缓存值，否则解码后加入缓存。
 func (r *ownerResolver) resolve(base58Str string) types.Pubkey {
-	if base58Str == consts.RaydiumV4AuthorityStr {
+	// 1. 优先处理热点地址
+	switch base58Str {
+	case consts.RaydiumV4AuthorityStr:
 		return consts.RaydiumV4Authority
+	case consts.PumpFunAMMFee1Str:
+		return consts.PumpFunAMMFee1
+	case consts.PumpFunAMMFee4Str:
+		return consts.PumpFunAMMFee4
+	case consts.PumpFunAMMFee5Str:
+		return consts.PumpFunAMMFee5
+	case consts.PumpFunAMMFee6Str:
+		return consts.PumpFunAMMFee6
+	case consts.PumpFunAMMFee8Str:
+		return consts.PumpFunAMMFee8
 	}
-	for _, kv := range r.cached {
-		if kv.base58 == base58Str {
-			return kv.pubkey
-		}
+
+	// 2. 再走缓存
+	if pk, ok := r.owners[base58Str]; ok {
+		return pk
 	}
+
+	// 3. 未命中缓存：解码 + 回写缓存
 	pk := types.PubkeyFromBase58(base58Str)
-	r.cached = append(r.cached, ownerKV{base58: base58Str, pubkey: pk})
+	r.owners[base58Str] = pk
 	return pk
 }

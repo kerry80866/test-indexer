@@ -31,16 +31,14 @@ func handleRaydiumV4Instruction(
 	if len(ix.Data) == 0 {
 		return nil, current + 1
 	}
-
 	switch ix.Data[0] {
 	case SwapBaseIn, SwapBaseOut:
-		return extractRaydiumV4SwapEvent(ctx, instrs, current)
+		return extractSwapEvent(ctx, instrs, current)
 
 	case Deposit:
-		return extractRaydiumV4AddLiquidityEvent(ctx, instrs, current)
+		return extractAddLiquidityEvent(ctx, instrs, current)
 
 	case Withdraw:
-		// TODO: return extractLiquidity(...)
 		return nil, current + 1
 
 	default:

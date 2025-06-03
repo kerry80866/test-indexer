@@ -17,7 +17,12 @@ type TaskResult struct {
 // workerNum: 并发工作协程数量，实际并发数不会超过输入元素数量
 // fn: 处理单个元素的函数
 // 返回: 与输入顺序一致的处理结果切片
-func ParallelMap[T any, R any](inputs []T, workerNum int, fn func(T) R) []R {
+func ParallelMap[T any, R any, C any](
+	inputs []T,
+	workerNum int,
+	contextFactory func() C,
+	fn func(ctx C, input T) R,
+) []R {
 	inputLen := len(inputs)
 	// 空输入快速返回
 	if inputLen == 0 {
@@ -26,7 +31,7 @@ func ParallelMap[T any, R any](inputs []T, workerNum int, fn func(T) R) []R {
 
 	// 单个元素时直接处理，避免并发开销
 	if inputLen == 1 {
-		return []R{fn(inputs[0])}
+		return []R{fn(contextFactory(), inputs[0])}
 	}
 
 	// 限制工作协程数量不超过输入元素数
@@ -38,27 +43,26 @@ func ParallelMap[T any, R any](inputs []T, workerNum int, fn func(T) R) []R {
 		index int
 		value T
 	})
-	// 结果通道: 缓冲区大小为 min(输入长度, 工作协程数*8)
 	// 避免大输入时占用过多内存，同时减少阻塞
-	bufferSize := min(inputLen, workerNum*8)
 	resultCh := make(chan struct {
 		index  int
 		result R
-	}, bufferSize)
+	}, inputLen)
 
 	// 启动工作协程
 	for i := 0; i < workerNum; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			ctx := contextFactory()
 
 			// 循环处理输入通道中的任务
 			for in := range inputCh {
-				res := fn(in.value)
+				result := fn(ctx, in.value)
 				resultCh <- struct {
 					index  int
 					result R
-				}{in.index, res}
+				}{in.index, result}
 			}
 		}()
 	}

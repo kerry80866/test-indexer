@@ -22,11 +22,11 @@ func extractTokenTransferEvent(
 
 	event := pb.TransferEvent{
 		Type:             pb.EventType_TRANSFER,
-		EventIndex:       core.BuildEventID(ctx.TxIndex, ix.IxIndex, ix.InnerIndex),
+		EventId:          core.BuildEventID(ctx.Slot, ctx.TxIndex, ix.IxIndex, ix.InnerIndex),
 		Slot:             ctx.Slot,
 		BlockTime:        ctx.BlockTime,
 		TxHash:           ctx.TxHash,
-		TxFrom:           ctx.TxFrom,
+		Signers:          ctx.Signers,
 		Token:            parsedTransfer.Token[:],
 		SrcAccount:       parsedTransfer.SrcAccount[:],
 		DestAccount:      parsedTransfer.DestAccount[:],
@@ -39,7 +39,7 @@ func extractTokenTransferEvent(
 	}
 
 	return &core.Event{
-		ID:        event.EventIndex,   // 本事件唯一 ID（建议保持 ID 命名）
+		ID:        event.EventId,
 		EventType: uint32(event.Type), // EventType = TRANSFER
 		Key:       event.Token,        // 分区 Key，可用 Token / From / Owner
 		Event: &pb.Event{ // protobuf 封装

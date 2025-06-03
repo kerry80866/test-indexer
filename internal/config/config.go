@@ -1,9 +1,17 @@
 package config
 
+type LogConfig struct {
+	Format   string `json:",default=console"` // 日志格式，console/json
+	LogDir   string `json:",default=logs"`    // 日志目录
+	Level    string `json:",default=info"`    // 日志级别 debug/info/warn/error
+	Compress bool   `json:",default=false"`   // 是否压缩旧日志
+}
+
 // PriceServiceConfig 表示价格服务配置
 type PriceServiceConfig struct {
 	Endpoint      string // 价格服务地址，例如 http://price.service.local
 	SyncIntervalS int    // 同步价格的时间间隔（秒）
+	WSolPrice     float64
 }
 
 // KafkaProducerConfig 表示 Kafka 生产者相关配置
@@ -31,6 +39,9 @@ type TimeConfig struct {
 
 // GrpcConfig 是主配置结构体，用于驱动索引器服务
 type GrpcConfig struct {
+	// 日志配置
+	LogConf LogConfig
+
 	// Price Service 价格服务配置（可选）
 	PriceServiceConf PriceServiceConfig
 

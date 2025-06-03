@@ -3,10 +3,9 @@ package svc
 import (
 	"dex-indexer-sol/internal/cache"
 	"dex-indexer-sol/internal/config"
+	"dex-indexer-sol/internal/logger"
 	"dex-indexer-sol/internal/logic/progress"
 	"dex-indexer-sol/internal/mq"
-	"log"
-
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 )
 
@@ -19,11 +18,12 @@ type GrpcServiceContext struct {
 }
 
 // NewGrpcServiceContext 创建一个新的 GRPC 服务上下文
-func NewGrpcServiceContext(c config.GrpcConfig) *GrpcServiceContext {
+func NewGrpcServiceContext(c config.GrpcConfig) (*GrpcServiceContext, error) {
 	// 1. 初始化 Kafka 生产者
 	producer, err := mq.NewKafkaProducer(c.KafkaProducerConf)
 	if err != nil {
-		log.Fatalf("❌ Kafka producer 初始化失败: %v", err)
+		logger.Errorf("Kafka producer 初始化失败: %v", err)
+		return nil, err
 	}
 
 	//// 2. 初始化 Redis 客户端（用于 slot 状态缓存）
@@ -35,10 +35,11 @@ func NewGrpcServiceContext(c config.GrpcConfig) *GrpcServiceContext {
 	//// 3. 初始化 PostgreSQL 数据库连接（用于 slot 落库）
 	//db, err := sql.Open("postgres", c.PostgresDSN)
 	//if err != nil {
-	//	log.Fatalf("❌ PostgreSQL 连接失败: %v", err)
+	//	logger.Errorf("PostgreSQL 连接失败: %v", err)
+	//	return nil, err
 	//}
 
-	// 4. 判定“近期 block”的时间阈值（默认 60 秒）
+	// 4. 判定"近期 block"的时间阈值（默认 60 秒）
 	threshold := c.ProgressConf.RecentThresholdSec
 	if threshold <= 0 {
 		threshold = 60
@@ -57,8 +58,8 @@ func NewGrpcServiceContext(c config.GrpcConfig) *GrpcServiceContext {
 		ProgressManager: nil,
 	}
 
-	log.Println("✅ GRPC 服务上下文初始化完成")
-	return ctx
+	logger.Infof("GRPC 服务上下文初始化完成")
+	return ctx, nil
 }
 
 // Close 关闭服务上下文中的资源

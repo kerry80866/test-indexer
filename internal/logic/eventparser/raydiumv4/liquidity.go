@@ -2,10 +2,10 @@ package raydiumv4
 
 import (
 	"dex-indexer-sol/internal/consts"
+	"dex-indexer-sol/internal/logger"
 	"dex-indexer-sol/internal/logic/core"
 	"dex-indexer-sol/internal/logic/eventparser/common"
 	"dex-indexer-sol/internal/utils"
-	"github.com/zeromicro/go-zero/core/logx"
 )
 
 // 来源：https://github.com/raydium-io/raydium-amm/blob/master/program/src/instruction.rs
@@ -26,7 +26,7 @@ import (
 //  11. `[writable]`   用户 LP token 账户
 //  12. `[signer]`     用户钱包账户
 //  13. `[writable]`   市场 event queue（Serum）
-func extractRaydiumV4AddLiquidityEvent(
+func extractAddLiquidityEvent(
 	ctx *common.ParserContext,
 	instrs []*core.AdaptedInstruction,
 	current int,
@@ -34,7 +34,7 @@ func extractRaydiumV4AddLiquidityEvent(
 	ix := instrs[current]
 
 	if len(ix.Accounts) != 14 {
-		logx.Errorf("[RaydiumV4:AddLiquidity] 指令账户长度不足: got=%d, expect>=14, tx=%s",
+		logger.Errorf("[RaydiumV4:AddLiquidity] 指令账户长度不足: got=%d, expect>=14, tx=%s",
 			len(ix.Accounts), ctx.TxHashString())
 		return nil, current + 1
 	}
@@ -48,27 +48,16 @@ func extractRaydiumV4AddLiquidityEvent(
 	}, 3)
 
 	if result == nil || result.Token1Transfer == nil || result.Token2Transfer == nil || result.LpMintTo == nil {
-		logx.Errorf("[RaydiumV4:AddLiquidity] 转账结构缺失: tx=%s", ctx.TxHashString())
-		return nil, current + 1
-	}
-
-	// 校验用户钱包一致性（双 token 的 src wallet 均等于第 12 位 wallet）
-	expectedWallet := ix.Accounts[12]
-	if expectedWallet != result.Token1Transfer.SrcWallet || expectedWallet != result.Token2Transfer.SrcWallet {
-		logx.Errorf("[RaydiumV4:AddLiquidity] 用户钱包不一致: tx=%s, expect=%s, got1=%s, got2=%s",
-			ctx.TxHashString(),
-			expectedWallet,
-			result.Token1Transfer.SrcWallet,
-			result.Token2Transfer.SrcWallet)
+		logger.Errorf("[RaydiumV4:AddLiquidity] 转账结构缺失: tx=%s", ctx.TxHashString())
 		return nil, current + 1
 	}
 
 	baseTransfer, quoteTransfer := determineBaseQuoteTransfer(result.Token1Transfer, result.Token2Transfer)
-	event := common.BuildAddLiquidityEvent(ctx, ix, baseTransfer, quoteTransfer, result.LpMintTo, ix.Accounts[1], consts.DexRaydiumV4)
+	event := common.BuildAddLiquidityEvent(ctx, ix, baseTransfer, quoteTransfer, ix.Accounts[1], consts.DexRaydiumV4)
 	if event == nil {
 		return event, current + 1
 	}
-	return event, current + 3
+	return event, result.MaxIndex + 1
 }
 
 // 来源：https://github.com/raydium-io/raydium-amm/blob/master/program/src/instruction.rs
@@ -97,7 +86,7 @@ func extractRaydiumV4AddLiquidityEvent(
 // /   17. `[writable]` Market event queue Account
 // /   18. `[writable]` Market bids Account
 // /   19. `[writable]` Market asks Account
-func extractRaydiumV4RemoveLiquidityEvent(
+func extractRemoveLiquidityEvent(
 	ctx *common.ParserContext,
 	instrs []*core.AdaptedInstruction,
 	current int,
@@ -105,33 +94,33 @@ func extractRaydiumV4RemoveLiquidityEvent(
 	ix := instrs[current]
 
 	if len(ix.Accounts) < 20 {
-		logx.Errorf("[RaydiumV4:AddLiquidity] 指令账户长度不足: got=%d, expect>=14, tx=%s",
+		logger.Errorf("[RaydiumV4:RemoveLiquidity] 指令账户长度不足: got=%d, expect>=14, tx=%s",
 			len(ix.Accounts), ctx.TxHashString())
 		return nil, current + 1
 	}
 
-	//offset := 0
-	//if len(ix.Accounts) >= 22 {
-	//	offset = 2
-	//}
-	//
-	//result := common.FindRemoveLiquidityTransfers(ctx, instrs, current, &common.LiquidityInstructionIndex{
-	//	UserToken1AccountIndex: 14 + offset,
-	//	UserToken2AccountIndex: 15 + offset,
-	//	PoolToken1AccountIndex: 6,
-	//	PoolToken2AccountIndex: 7,
-	//	LpMintIndex:            5,
-	//}, 3)
-	//
-	//if result == nil || result.Token1Transfer == nil || result.Token2Transfer == nil || result.LpBurn == nil {
-	//	logx.Errorf("[RaydiumV4:AddLiquidity] 转账结构缺失: tx=%s", ctx.TxHashString())
-	//	return nil, current + 1
-	//}
+	offset := 0
+	if len(ix.Accounts) >= 22 {
+		offset = 2
+	}
+
+	result := common.FindRemoveLiquidityTransfers(ctx, instrs, current, &common.LiquidityInstructionIndex{
+		UserToken1AccountIndex: 14 + offset,
+		UserToken2AccountIndex: 15 + offset,
+		PoolToken1AccountIndex: 6,
+		PoolToken2AccountIndex: 7,
+		LpMintIndex:            5,
+	}, 3)
+
+	if result == nil || result.Token1Transfer == nil || result.Token2Transfer == nil || result.LpBurn == nil {
+		logger.Errorf("[RaydiumV4:RemoveLiquidity] 转账结构缺失: tx=%s", ctx.TxHashString())
+		return nil, current + 1
+	}
 	//
 	//// 校验用户钱包一致性（双 token 的 src wallet 均等于第 12 位 wallet）
 	//expectedWallet := ix.Accounts[12]
 	//if expectedWallet != result.Token1Transfer.SrcWallet || expectedWallet != result.Token2Transfer.SrcWallet {
-	//	logx.Errorf("[RaydiumV4:AddLiquidity] 用户钱包不一致: tx=%s, expect=%s, got1=%s, got2=%s",
+	//	logger.Errorf("[RaydiumV4:RemoveLiquidity] 用户钱包不一致: tx=%s, expect=%s, got1=%s, got2=%s",
 	//		ctx.TxHashString(),
 	//		expectedWallet,
 	//		result.Token1Transfer.SrcWallet,
@@ -140,11 +129,11 @@ func extractRaydiumV4RemoveLiquidityEvent(
 	//}
 	//
 	//baseTransfer, quoteTransfer := determineBaseQuoteTransfer(result.Token1Transfer, result.Token2Transfer)
-	//event := common.BuildAddLiquidityEvent(ctx, ix, baseTransfer, quoteTransfer, result.LpMintTo, ix.Accounts[1], consts.DexRaydiumV4)
+	//event := common.BuildAddLiquidityEvent(ctx, ix, baseTransfer, quoteTransfer, ix.Accounts[1], consts.DexRaydiumV4)
 	//if event == nil {
 	//	return event, current + 1
 	//}
-	return nil, current + 3
+	return nil, result.MaxIndex + 1
 }
 
 func determineBaseQuoteTransfer(

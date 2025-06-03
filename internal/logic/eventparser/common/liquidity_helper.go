@@ -50,23 +50,7 @@ func validateLiquidityInstructionIndex(indexes *LiquidityInstructionIndex, accou
 }
 
 // FindAddLiquidityTransfers 尝试从主指令开始向后匹配添加流动性相关的转账（Transfer）和铸造（MintTo）操作，
-// 适用于如 Raydium 等 AMM，在用户添加流动性时的典型指令结构解析。
-//
-// 参数说明：
-//   - ctx          : 当前交易解析上下文（包含账户余额、Token 结构等信息）。
-//   - instrs       : 展平后的指令列表（包含主指令和 inner 指令）。
-//   - current      : 当前主指令在 instrs 中的索引（作为匹配起点）。
-//   - indexes      : 表示用户提供和池子使用的 Token 账户索引结构，包括 LP Mint（可选）。
-//   - maxLookahead : 向后最多检查的指令数量（不包括主指令本身）；
-//     若为 0，表示不限制，遍历当前主指令的所有 inner 指令（IxIndex 不变）。
-//
-// 返回值：
-// - Token1Transfer : 用户支付的 Token1 的转账记录（用户 → 池子）。
-// - Token2Transfer : 用户支付的 Token2 的转账记录（用户 → 池子）。
-// - LpMint         : 用户收到的 LP Token 的铸造记录（MintTo）。
-// - MaxIndex       : 匹配到的所有相关指令中的最大索引位置（用于标记事件范围）。
-// FindAddLiquidityTransfers 尝试从主指令开始向后匹配添加流动性相关的转账（Transfer）和铸造（MintTo）操作，
-// 适用于如 Raydium 等 AMM，在用户添加流动性时的典型指令结构解析。
+// 适用于AMM在用户添加流动性时的典型指令结构解析。
 //
 // 参数说明：
 //   - ctx          : 当前交易解析上下文（包含账户余额、Token 结构等信息）。
@@ -193,7 +177,7 @@ func FindAddLiquidityTransfers(
 }
 
 // FindRemoveLiquidityTransfers 尝试从主指令开始向后匹配移除流动性相关的转账（Transfer）和销毁（Burn）操作。
-// 适用于如 Raydium 等 AMM，在用户移除流动性时的典型指令结构解析。
+// 适用于AMM在用户移除流动性时的典型指令结构解析。
 //
 // 参数说明：
 //   - ctx          : 当前交易解析上下文（包含账户余额、Token 结构等信息）。
@@ -316,11 +300,4 @@ func FindRemoveLiquidityTransfers(
 		LpBurn:         lpBurn,
 		MaxIndex:       maxIndex,
 	}
-}
-
-func isTransferConflict(pt, other *ParsedTransfer) bool {
-	if other == nil {
-		return false
-	}
-	return pt.DestAccount == other.DestAccount || pt.SrcAccount == other.SrcAccount
 }

@@ -28,13 +28,24 @@ const (
 	RaydiumCLMMProgramStr = "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK"
 
 	// DEX: PumpFun
-	PumpFunProgramStr = "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P"
+	PumpFunAMMProgramStr = "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA"
+	PumpFunProgramStr    = "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P"
 
 	// DEX: Meteora
 	MeteoraDLMMProgramStr = "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo"
 
 	// Known Owner Addresses
 	RaydiumV4AuthorityStr = "5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1"
+	PumpFunAMMFee1Str     = "FWsW1xNtWscwNmKv6wVsU1iTzRN6wmmk3MjxRP5tT7hz"
+	PumpFunAMMFee2Str     = ""
+	PumpFunAMMFee3Str     = ""
+	PumpFunAMMFee4Str     = "9rPYyANsfQZw3DnDmKE3YCQF5E8oD89UXoHn9JFEhJUz"
+	PumpFunAMMFee5Str     = "7VtfL8fvgNfhz17qKRMjzQEXgbdpnHHHQRh54R9jP2RJ"
+	PumpFunAMMFee6Str     = "AVmoTthdrX6tKt4nDjco2D775W2YK3sDhxPcMmzUAmTY"
+	PumpFunAMMFee7Str     = ""
+	PumpFunAMMFee8Str     = "JCRGumoE9Qi5BBgULTgdgTLjSgkCMSbF62ZZfGs84JeU"
+	PumpFunAMMFee9Str     = ""
+	PumpFunAMMFee10Str    = ""
 )
 
 var (
@@ -68,8 +79,16 @@ var (
 	RaydiumV4Program   = types.PubkeyFromBase58(RaydiumV4ProgramStr)
 	RaydiumCLMMProgram = types.PubkeyFromBase58(RaydiumCLMMProgramStr)
 	PumpFunProgram     = types.PubkeyFromBase58(PumpFunProgramStr)
+	PumpFunAMMProgram  = types.PubkeyFromBase58(PumpFunAMMProgramStr)
 	MeteoraDLMMProgram = types.PubkeyFromBase58(MeteoraDLMMProgramStr)
 
 	// Known Owner
 	RaydiumV4Authority = types.PubkeyFromBase58(RaydiumV4AuthorityStr)
+	PumpFunAMMFee1     = types.PubkeyFromBase58(PumpFunAMMFee1Str)
+	//PumpFunAMMFee2     = types.PubkeyFromBase58(PumpFunAMMFee2Str)
+	//PumpFunAMMFee3     = types.PubkeyFromBase58(PumpFunAMMFee3Str)
+	PumpFunAMMFee4 = types.PubkeyFromBase58(PumpFunAMMFee4Str)
+	PumpFunAMMFee5 = types.PubkeyFromBase58(PumpFunAMMFee5Str)
+	PumpFunAMMFee6 = types.PubkeyFromBase58(PumpFunAMMFee6Str)
+	PumpFunAMMFee8 = types.PubkeyFromBase58(PumpFunAMMFee8Str)
 )

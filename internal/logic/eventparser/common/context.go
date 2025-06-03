@@ -13,7 +13,7 @@ type ParserContext struct {
 	Tx        *core.AdaptedTx // 原始交易上下文，包含 slot、指令、账户等
 	TxIndex   uint32          // 当前交易在区块中的序号（基于 Geyser TransactionIndex）
 	TxHash    []byte          // 交易签名（64 字节原始数据）
-	TxFrom    []byte          // 交易发起者（通常为 accountKeys[0]）
+	Signers   [][]byte        // 交易签名者
 	BlockTime int64           // 区块时间戳（Unix 秒级）
 	Slot      uint64          // 当前区块 Slot（Solana 高度单位）
 
@@ -22,7 +22,7 @@ type ParserContext struct {
 }
 
 func (ctx *ParserContext) TxHashString() string {
-	return base58.Encode(ctx.TxHash[:])
+	return base58.Encode(ctx.TxHash)
 }
 
 // InstructionHandler 定义了统一的事件指令解析函数签名。
@@ -47,7 +47,7 @@ func BuildParserContext(tx *core.AdaptedTx) *ParserContext {
 		Slot:        tx.TxCtx.Slot,
 		BlockTime:   tx.TxCtx.BlockTime,
 		TxHash:      tx.Signature,
-		TxFrom:      tx.Signer[:],
+		Signers:     tx.Signers,
 		LogMessages: tx.LogMessages,
 		Balances:    tx.Balances,
 	}

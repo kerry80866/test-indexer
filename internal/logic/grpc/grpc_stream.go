@@ -4,11 +4,11 @@ import (
 	"context"
 	"crypto/tls"
 	"dex-indexer-sol/internal/consts"
+	"dex-indexer-sol/internal/logger"
 	"dex-indexer-sol/internal/svc"
 	"errors"
 	"fmt"
 	"google.golang.org/grpc/metadata"
-	"log"
 	"sync"
 	"time"
 
@@ -115,13 +115,13 @@ func (m *GrpcStreamManager) mustConnect() {
 				time.Sleep(m.reconnectInterval)
 			}
 		}
-		log.Printf("Connecting... Attempt %d", m.reconnectAttempts+1)
+		logger.Infof("[GrpcStream] Connecting... Attempt %d", m.reconnectAttempts+1)
 		m.reconnectAttempts++
 		err := m.connect()
 		if err == nil {
 			return // 连接成功
 		}
-		log.Printf("Connect failed: %v, will retry...", err)
+		logger.Errorf("[GrpcStream] Connect failed: %v, will retry...", err)
 	}
 }
 
@@ -156,7 +156,7 @@ func (m *GrpcStreamManager) connect() error {
 	}
 	m.connCtx, m.connCancel = context.WithCancel(context.Background())
 
-	log.Println("Attempting to connect...")
+	logger.Infof("[GrpcStream] Attempting to connect...")
 
 	metaCtx := metadata.NewOutgoingContext(
 		m.connCtx,
@@ -164,20 +164,20 @@ func (m *GrpcStreamManager) connect() error {
 	)
 	stream, err := m.client.Subscribe(metaCtx)
 	if err != nil {
-		log.Printf("Failed to subscribe: %v", err)
+		logger.Errorf("[GrpcStream] Failed to subscribe: %v", err)
 		return err // 只返回错误
 	}
 
 	req := buildSubscribeRequest()
 	err = sendWithTimeout(m.connCtx, stream.Send, req, time.Duration(m.sendTimeoutSec)*time.Second)
 	if err != nil {
-		log.Printf("Failed to send request: %v", err)
+		logger.Errorf("[GrpcStream] Failed to send request: %v", err)
 		return err // 只返回错误
 	}
 
 	m.stream = stream
 	m.reconnectAttempts = 0
-	log.Println("Connection established")
+	logger.Infof("[GrpcStream] Connection established")
 
 	// 启动 ping 协程
 	go m.pingLoop(m.connCtx)
@@ -190,6 +190,10 @@ func (m *GrpcStreamManager) connect() error {
 func (m *GrpcStreamManager) blockRecvLoop(ctx context.Context) {
 	last := time.Now()
 	recvTimeout := time.Duration(m.recvTimeoutSec) * time.Second
+
+	var lastSlot uint64 = 0
+	var totalLatency int64 = 0
+	var count int64 = 0
 	for {
 		select {
 		case <-ctx.Done():
@@ -198,30 +202,39 @@ func (m *GrpcStreamManager) blockRecvLoop(ctx context.Context) {
 			update, err := recvWithTimeout[*pb.SubscribeUpdate](ctx, m.stream.Recv, recvTimeout)
 			now := time.Now()
 			if err != nil {
-				log.Printf("Stream error: %v", err)
+				logger.Errorf("[GrpcStream] Stream error: %v", err)
 				m.reconnect()
 				return
 			}
 
 			switch u := (*update).GetUpdateOneof().(type) {
 			case *pb.SubscribeUpdate_Block:
-				interval := now.UnixMilli() - u.Block.BlockTime.Timestamp*1000 // 算出你收到这个区块时的延迟（ms）
-				log.Printf("received block at slot %v, latency to blockTime: %v ms", u.Block.Slot, interval)
+				// 检查是否丢失slot
+				if lastSlot != 0 && u.Block.Slot != lastSlot+1 {
+					logger.Errorf("[GrpcStream] slot skipped: last slot = %d, current slot = %d", lastSlot, u.Block.Slot)
+				}
+				lastSlot = u.Block.Slot
+
+				interval := now.UnixMilli() - u.Block.BlockTime.Timestamp*1000 // 算出收到这个区块时的延迟（ms）
+				totalLatency += interval
+				count++
+				avgLatency := totalLatency / count
+				logger.Infof("[GrpcStream] received block at slot %v, latency: %v ms, avg latency: %v ms (count=%d)", u.Block.Slot, interval, avgLatency, count)
 
 				select {
 				case m.blockChan <- u.Block:
 					// 成功写入，无事发生
 				default:
-					//log.Printf("blockChan is full, discard block at slot %v", u.Block.Slot)
+					//logger.Warnf("[GrpcStream] blockChan is full, discard block at slot %v", u.Block.Slot)
 				}
 				//interval1 := now.Sub(last)
-				//log.Printf("received block at slot %v, interval since last block: %v ms", u.Block.Slot, interval1.Milliseconds())
+				//logger.Infof("[GrpcStream] received block at slot %v, interval since last block: %v ms", u.Block.Slot, interval1.Milliseconds())
 				//无论是否写入成功，都要更新 last
 				last = now
 			}
 
 			if time.Since(last) > recvTimeout {
-				log.Printf("%v未收到block，触发重连", recvTimeout)
+				logger.Errorf("[GrpcStream] %v未收到block，触发重连", recvTimeout)
 				m.reconnect()
 				return
 			}
@@ -353,7 +366,7 @@ func (m *GrpcStreamManager) pingLoop(ctx context.Context) {
 			}
 			err := sendWithTimeout(ctx, m.stream.Send, pingReq, time.Duration(m.sendTimeoutSec)*time.Second)
 			if err != nil {
-				log.Printf("Ping failed (non-critical): %v", err)
+				logger.Warnf("[GrpcStream] Ping failed (non-critical): %v", err)
 				continue // ✅ 安全！由 recvLoop 兜底 reconnect
 			}
 		}

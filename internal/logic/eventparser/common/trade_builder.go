@@ -1,6 +1,7 @@
 package common
 
 import (
+	"dex-indexer-sol/internal/logger"
 	"dex-indexer-sol/internal/logic/core"
 	"dex-indexer-sol/internal/types"
 	"dex-indexer-sol/internal/utils"
@@ -19,6 +20,12 @@ func BuildTradeEvent(
 ) *core.Event {
 	var trade *pb.TradeEvent
 
+	if userToPool.Token == poolToUser.Token {
+		logger.Errorf("[BuildTradeEvent] tx=%s: swap token mismatch — both transfer tokens are the same: mint=%s",
+			ctx.TxHashString(), userToPool.Token)
+		return nil
+	}
+
 	if userToPool.Token == quote {
 		// 用户支付 quote，获得 base → BUY
 		trade = buildBuyEvent(ctx, ix, userToPool, poolToUser, quote, pairAddress, uint32(dex))
@@ -28,7 +35,7 @@ func BuildTradeEvent(
 	}
 
 	return &core.Event{
-		ID:        trade.EventIndex,
+		ID:        trade.EventId,
 		EventType: uint32(trade.Type),
 		Key:       trade.Token, // base token 分区
 		Event: &pb.Event{
@@ -51,11 +58,11 @@ func buildBuyEvent(
 ) *pb.TradeEvent {
 	event := &pb.TradeEvent{
 		Type:              pb.EventType_TRADE_BUY,
-		EventIndex:        core.BuildEventID(ctx.TxIndex, ix.IxIndex, ix.InnerIndex),
+		EventId:           core.BuildEventID(ctx.Slot, ctx.TxIndex, ix.IxIndex, ix.InnerIndex),
 		Slot:              ctx.Slot,
 		BlockTime:         ctx.BlockTime,
 		TxHash:            ctx.TxHash,
-		TxFrom:            ctx.TxFrom,
+		Signers:           ctx.Signers,
 		Dex:               dex,
 		TokenDecimals:     uint32(poolToUser.Decimals), // base 精度
 		QuoteDecimals:     uint32(userToPool.Decimals), // quote 精度
@@ -89,11 +96,11 @@ func buildSellEvent(
 ) *pb.TradeEvent {
 	event := &pb.TradeEvent{
 		Type:              pb.EventType_TRADE_SELL,
-		EventIndex:        core.BuildEventID(ctx.TxIndex, ix.IxIndex, ix.InnerIndex),
+		EventId:           core.BuildEventID(ctx.Slot, ctx.TxIndex, ix.IxIndex, ix.InnerIndex),
 		Slot:              ctx.Slot,
 		BlockTime:         ctx.BlockTime,
 		TxHash:            ctx.TxHash,
-		TxFrom:            ctx.TxFrom,
+		Signers:           ctx.Signers,
 		Dex:               dex,
 		TokenDecimals:     uint32(userToPool.Decimals),
 		QuoteDecimals:     uint32(poolToUser.Decimals),
@@ -117,7 +124,7 @@ func buildSellEvent(
 
 // fillUsdEstimate 用 quote token 价格补全交易估值。
 func fillUsdEstimate(event *pb.TradeEvent, quote types.Pubkey, ctx *ParserContext) {
-	if quoteUsd, ok := ctx.Tx.TxCtx.QuotesPrice[quote]; ok {
+	if quoteUsd, ok := ctx.Tx.TxCtx.GetQuoteUsd(quote); ok {
 		baseAmount := float64(event.TokenAmount) / utils.Pow10(event.TokenDecimals)
 		quoteAmount := float64(event.QuoteTokenAmount) / utils.Pow10(event.QuoteDecimals)
 

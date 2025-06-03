@@ -20,11 +20,11 @@ func extractTokenMintToEvent(
 
 	event := pb.MintToEvent{
 		Type:           pb.EventType_MINT_TO,
-		EventIndex:     core.BuildEventID(ctx.TxIndex, ix.IxIndex, ix.InnerIndex),
+		EventId:        core.BuildEventID(ctx.Slot, ctx.TxIndex, ix.IxIndex, ix.InnerIndex),
 		Slot:           ctx.Slot,
 		BlockTime:      ctx.BlockTime,
 		TxHash:         ctx.TxHash,
-		TxFrom:         ctx.TxFrom,
+		Signers:        ctx.Signers,
 		Token:          parsedMintTo.Token[:],
 		ToTokenAccount: parsedMintTo.DestAccount[:],
 		ToAddress:      parsedMintTo.DestWallet[:], // TokenAccount 的 owner
@@ -34,7 +34,7 @@ func extractTokenMintToEvent(
 	}
 
 	return &core.Event{
-		ID:        event.EventIndex,   // 唯一事件 ID（txIndex + ixIndex + innerIndex）
+		ID:        event.EventId,
 		EventType: uint32(event.Type), // EventType = MINT_TO
 		Key:       event.Token,        // 分区 key，可用 Token 拆分
 		Event: &pb.Event{

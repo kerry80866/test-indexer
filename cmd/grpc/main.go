@@ -4,6 +4,7 @@ import (
 	"dex-indexer-sol/internal/cache"
 	"dex-indexer-sol/internal/config"
 	"dex-indexer-sol/internal/consts"
+	"dex-indexer-sol/internal/logger"
 	"dex-indexer-sol/internal/logic/eventparser"
 	"dex-indexer-sol/internal/logic/grpc"
 	"dex-indexer-sol/internal/svc"
@@ -23,9 +24,10 @@ import (
 var configFile = flag.String("f", "etc/grpc.yaml", "the config file")
 
 func main() {
+	defer logger.Sync() // 保证日志一定会刷盘
 	defer func() {
 		if r := recover(); r != nil {
-			logx.Errorf("panic: %+v\nstack: %s", r, debug.Stack())
+			logger.Errorf("panic: %+v\nstack: %s", r, debug.Stack())
 		}
 	}()
 
@@ -34,16 +36,26 @@ func main() {
 	var c config.GrpcConfig
 	conf.MustLoad(*configFile, &c)
 
-	serviceContext := svc.NewGrpcServiceContext(c)
+	// === 初始化 zap logger 并接管 logx 输出 ===
+	logger.InitLogger(c.LogConf)
+	logx.SetWriter(logger.ZapWriter{})
+
+	serviceContext, err := svc.NewGrpcServiceContext(c)
+	if err != nil {
+		panic(err)
+	}
 
 	// 初始化事件解析器模块：注册各协议的指令解析handler
 	eventparser.Init()
 
 	// 初始化价格同步服务
-	//priceSyncService := service.NewPriceSyncService(&c.PriceServiceConf, serviceContext.PriceCache)
+	//priceSyncService, err := service.NewPriceSyncService(&c.PriceServiceConf, serviceContext.PriceCache)
+	//if err != nil {
+	//	panic(err)
+	//}
 	serviceContext.PriceCache.UpdateFrom(map[string][]cache.TokenPricePoint{
 		consts.WSOLMintStr: {
-			{PriceUsd: 180.0, Timestamp: time.Now().Unix()},
+			{PriceUsd: serviceContext.Config.PriceServiceConf.WSolPrice, Timestamp: time.Now().Unix()},
 		},
 		consts.USDCMintStr: {
 			{PriceUsd: 1.0, Timestamp: time.Now().Unix()},
@@ -68,7 +80,7 @@ func main() {
 	blockProcessor := grpc.NewBlockProcessor(serviceContext, blockChan)
 	sg.Add(blockProcessor)
 
-	logx.Infof("Starting grpc stream service")
+	logger.Info("Starting grpc stream service")
 
 	// 启动服务
 	sg.Start()
@@ -78,6 +90,6 @@ func main() {
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	<-sig
 
-	logx.Info("Shutting down services...")
+	logger.Info("Shutting down services...")
 	sg.Stop()
 }
