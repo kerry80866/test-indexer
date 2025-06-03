@@ -24,5 +24,5 @@ type Event struct {
 //   - ixIndex    (8 bits)  : 当前交易中的主指令序号，范围 0 ~ 255
 //   - innerIndex (8 bits)  : inner 指令的序号
 func BuildEventID(slot uint64, txIndex uint32, ixIndex uint16, innerIndex uint16) uint64 {
-	return slot<<32 | uint64(txIndex)<<16 | uint64(ixIndex)<<8 | uint64(innerIndex+1)
+	return slot<<32 | uint64(txIndex)<<16 | uint64(ixIndex)<<8 | uint64(innerIndex)
 }
