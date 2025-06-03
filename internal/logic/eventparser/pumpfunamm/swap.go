@@ -10,14 +10,16 @@ import (
 )
 
 // extractSwapEvent 解析 Pump.fun AMM 的 swap 事件，构造标准 TradeEvent（BUY / SELL）。
-// 示例交易：https://solscan.io/tx/3feQ5jvR1ryaCVNwYCRGVhuisk6YCoWpTuCc5vQHgsTLq3sVTErq6Y8np5kAZsJBMnZJfqNBsdjskkCptgNNWLU9
+// 示例交易：
+// https://solscan.io/tx/3feQ5jvR1ryaCVNwYCRGVhuisk6YCoWpTuCc5vQHgsTLq3sVTErq6Y8np5kAZsJBMnZJfqNBsdjskkCptgNNWLU9
+// https://solscan.io/tx/63AWZvhhienFMG7G8BQxt5MEdWR1TNd9t415CkpfV6WHBBtLoYXdzErrmMTqcJ2TrWgmcY5cezhkjgm2otRmfHLG
 //
 // Pump.fun AMM Swap 指令账户布局：
 //  0. Pool
 //  1. User
 //  2. Global Config
-//  3. Token1 (Mint)
-//  4. Token2 (Mint)
+//  3. Token1 (Mint) // base mint
+//  4. Token2 (Mint) // quote mint
 //  5. UserToken1Account
 //  6. UserToken2Account
 //  7. PoolToken1Account
@@ -79,8 +81,11 @@ func extractSwapEvent(
 	// 推断 quote token（通常为 USDC/USDT 等稳定币）
 	quote, ok := utils.ChooseQuote(result.UserToPool.Token, result.PoolToUser.Token)
 	if !ok {
-		logger.Warnf("[PumpfunAMM:extractSwapEvent] 无法识别 quote token，跳过: tx=%s", ctx.TxHashString())
-		return nil, current + 1
+		quote = ix.Accounts[4]
+		if result.UserToPool.Token != quote && result.PoolToUser.Token != quote {
+			logger.Warnf("[PumpfunAMM:extractSwapEvent] 无法识别 quote token，跳过: tx=%s", ctx.TxHashString())
+			return nil, current + 1
+		}
 	}
 
 	// 在已确认 mint、用户账户和池子账户结构正确的前提下，
