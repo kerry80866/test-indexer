@@ -221,12 +221,12 @@ func (m *GrpcStreamManager) blockRecvLoop(ctx context.Context) {
 				avgLatency := totalLatency / count
 				logger.Infof("[GrpcStream] received block at slot %v, latency: %v ms, avg latency: %v ms (count=%d)", u.Block.Slot, interval, avgLatency, count)
 
-				select {
-				case m.blockChan <- u.Block:
-					// 成功写入，无事发生
-				default:
-					//logger.Warnf("[GrpcStream] blockChan is full, discard block at slot %v", u.Block.Slot)
-				}
+				//select {
+				//case m.blockChan <- u.Block:
+				//	// 成功写入，无事发生
+				//default:
+				//	//logger.Warnf("[GrpcStream] blockChan is full, discard block at slot %v", u.Block.Slot)
+				//}
 				//interval1 := now.Sub(last)
 				//logger.Infof("[GrpcStream] received block at slot %v, interval since last block: %v ms", u.Block.Slot, interval1.Milliseconds())
 				//无论是否写入成功，都要更新 last
