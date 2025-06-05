@@ -5,7 +5,6 @@ import (
 	"dex-indexer-sol/internal/logger"
 	"dex-indexer-sol/internal/logic/core"
 	"dex-indexer-sol/internal/logic/eventparser/common"
-	"dex-indexer-sol/internal/types"
 	"dex-indexer-sol/internal/utils"
 )
 
@@ -58,42 +57,21 @@ func extractSwapEvent(
 		return nil, current + 1
 	}
 
-	// 用户账户判断（5 / 6）
-	isUserAccount := func(p types.Pubkey) bool {
-		return p == ix.Accounts[5] || p == ix.Accounts[6]
-	}
-	// 池子账户判断（7 / 8）
-	isPoolAccount := func(p types.Pubkey) bool {
-		return p == ix.Accounts[7] || p == ix.Accounts[8]
-	}
-	// 合约未开源，严格校验账户角色是否正确
-	if !isUserAccount(result.UserToPool.SrcAccount) || !isPoolAccount(result.UserToPool.DestAccount) ||
-		!isPoolAccount(result.PoolToUser.SrcAccount) || !isUserAccount(result.PoolToUser.DestAccount) {
-		logger.Errorf("[PumpfunAMM:extractSwapEvent] 用户和池子账户不匹配: tx=%s, userToPool=%s→%s, poolToUser=%s→%s, 用户账户=[%s,%s], 池子账户=[%s,%s]",
-			ctx.TxHashString(),
-			result.UserToPool.SrcAccount, result.UserToPool.DestAccount,
-			result.PoolToUser.SrcAccount, result.PoolToUser.DestAccount,
-			ix.Accounts[5], ix.Accounts[6], ix.Accounts[7], ix.Accounts[8],
-		)
-		return nil, current + 1
-	}
-
-	// 推断 quote token（通常为 USDC/USDT 等稳定币）
+	// 优先尝试使用自定义优先级的quote token（WSOL、USDC、USDT等）
 	quote, ok := utils.ChooseQuote(result.UserToPool.Token, result.PoolToUser.Token)
 	if !ok {
-		quote = ix.Accounts[4]
+		quote = ix.Accounts[4] // 使用池子默认 quote token
 		if result.UserToPool.Token != quote && result.PoolToUser.Token != quote {
 			logger.Warnf("[PumpfunAMM:extractSwapEvent] 无法识别 quote token，跳过: tx=%s", ctx.TxHashString())
 			return nil, current + 1
 		}
 	}
 
-	// 在已确认 mint、用户账户和池子账户结构正确的前提下，
-	// ix.Accounts[0] 可安全视为该交易对的主池地址（通常是 Pool PDA 或代表账户）
+	// ix.Accounts[0] 为该交易对的主池地址
 	pairAddress := ix.Accounts[0]
 
 	// 构建标准 TradeEvent
-	event := common.BuildTradeEvent(ctx, ix, result.UserToPool, result.PoolToUser, pairAddress, quote, consts.DexPumpfunAMM)
+	event := common.BuildTradeEvent(ctx, ix, result.UserToPool, result.PoolToUser, pairAddress, quote, true, consts.DexPumpfunAMM)
 	if event == nil {
 		return nil, current + 1
 	}

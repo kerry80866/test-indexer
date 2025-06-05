@@ -4,8 +4,12 @@ import (
 	"dex-indexer-sol/internal/logger"
 	"dex-indexer-sol/internal/logic/core"
 	"dex-indexer-sol/internal/logic/eventparser/common"
+	"dex-indexer-sol/internal/logic/eventparser/meteoradlmm"
+	"dex-indexer-sol/internal/logic/eventparser/orcawhirlpool"
+	"dex-indexer-sol/internal/logic/eventparser/pumpfun"
 	"dex-indexer-sol/internal/logic/eventparser/pumpfunamm"
 	"dex-indexer-sol/internal/logic/eventparser/raydiumclmm"
+	"dex-indexer-sol/internal/logic/eventparser/raydiumcpmm"
 	"dex-indexer-sol/internal/logic/eventparser/raydiumv4"
 	"dex-indexer-sol/internal/logic/eventparser/spltoken"
 	"dex-indexer-sol/internal/types"
@@ -22,7 +26,11 @@ func Init() {
 	spltoken.RegisterHandlers(handlers)
 	raydiumv4.RegisterHandlers(handlers)
 	raydiumclmm.RegisterHandlers(handlers)
+	raydiumcpmm.RegisterHandlers(handlers)
 	pumpfunamm.RegisterHandlers(handlers)
+	pumpfun.RegisterHandlers(handlers)
+	meteoradlmm.RegisterHandlers(handlers)
+	orcawhirlpool.RegisterHandlers(handlers)
 }
 
 func ExtractEventsFromTx(adaptedTx *core.AdaptedTx) (result []*core.Event) {

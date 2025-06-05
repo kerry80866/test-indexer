@@ -38,24 +38,24 @@ func extractSwapEvent(
 		UserToken2AccountIndex: 4, // 用户接收 token 的账户
 		PoolToken1AccountIndex: 5, // 池子 token1 vault
 		PoolToken2AccountIndex: 6, // 池子 token2 vault
-	}, 2)
+	}, 4)
 	if result == nil {
 		logger.Errorf("[RaydiumCLMM:extractSwapEvent] 转账结构缺失: tx=%s", ctx.TxHashString())
 		return nil, current + 1
 	}
 
-	// 推断 quote token（通常为 USDC/USDT 等稳定币），用于区分 BUY / SELL
-	quote, ok := utils.ChooseQuote(result.UserToPool.Token, result.PoolToUser.Token)
-	if !ok {
-		logger.Warnf("[RaydiumCLMM:extractSwapEvent] 无法识别 quote token，跳过: tx=%s", ctx.TxHashString())
-		return nil, current + 1
+	// 推断 quote token
+	quote, isQuoteConfirmed := utils.ChooseQuote(result.UserToPool.Token, result.PoolToUser.Token)
+	if !isQuoteConfirmed {
+		// 选择一个token作为quote token, 此时isQuoteConfirmed为false
+		quote = result.UserToPool.Token
 	}
 
 	// 使用池子账户（Accounts[2]）作为交易对标识
 	pairAddress := ix.Accounts[2]
 
 	// 构建标准交易事件（TradeEvent）
-	event := common.BuildTradeEvent(ctx, ix, result.UserToPool, result.PoolToUser, pairAddress, quote, consts.DexRaydiumCLMM)
+	event := common.BuildTradeEvent(ctx, ix, result.UserToPool, result.PoolToUser, pairAddress, quote, isQuoteConfirmed, consts.DexRaydiumCLMM)
 	if event == nil {
 		return nil, current + 1
 	}

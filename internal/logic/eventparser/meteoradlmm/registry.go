@@ -1,4 +1,4 @@
-package raydiumclmm
+package meteoradlmm
 
 import (
 	"dex-indexer-sol/internal/consts"
@@ -9,13 +9,16 @@ import (
 )
 
 const (
-	Swap   uint64 = 0xf8c69e91e17587c8
-	SwapV2 uint64 = 0x2b04ed0b1ac91e62
+	Swap                 uint64 = 0xf8c69e91e17587c8
+	Swap2                uint64 = 0x414b3f4ceb5b5b88
+	SwapExactOut         uint64 = 0xfa49652126cf4bb8
+	SwapExactOut2        uint64 = 0x2bd7f784893cf351
+	SwapWithPriceImpact2 uint64 = 0x4a62c0d6b1334b33
 )
 
 // RegisterHandlers 注册 RaydiumV4 相关 Program 的指令解析器（仅处理 CLMM Program）
 func RegisterHandlers(m map[types.Pubkey]common.InstructionHandler) {
-	m[consts.RaydiumCLMMProgram] = handleInstruction
+	m[consts.MeteoraDLMMProgram] = handleInstruction
 }
 
 func handleInstruction(
@@ -32,7 +35,7 @@ func handleInstruction(
 
 	// 提取前 8 字节方法编号，进行分发
 	switch binary.BigEndian.Uint64(ix.Data[:8]) {
-	case Swap, SwapV2:
+	case Swap, Swap2, SwapExactOut, SwapExactOut2, SwapWithPriceImpact2:
 		return extractSwapEvent(ctx, instrs, current)
 
 	default:

@@ -77,8 +77,8 @@ func main() {
 	}
 	sg.Add(grpcService)
 
-	//blockProcessor := grpc.NewBlockProcessor(serviceContext, blockChan)
-	//sg.Add(blockProcessor)
+	blockProcessor := grpc.NewBlockProcessor(serviceContext, blockChan)
+	sg.Add(blockProcessor)
 
 	logger.Info("Starting grpc stream service")
 

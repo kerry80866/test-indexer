@@ -1,6 +1,8 @@
 package common
 
 import (
+	"bytes"
+	"dex-indexer-sol/internal/consts"
 	"dex-indexer-sol/internal/logger"
 	"dex-indexer-sol/internal/logic/core"
 	"dex-indexer-sol/internal/types"
@@ -16,6 +18,7 @@ func BuildTradeEvent(
 	poolToUser *ParsedTransfer,
 	pairAddress types.Pubkey,
 	quote types.Pubkey,
+	isQuoteConfirmed bool,
 	dex int,
 ) *core.Event {
 	var trade *pb.TradeEvent
@@ -34,10 +37,14 @@ func BuildTradeEvent(
 		trade = buildSellEvent(ctx, ix, userToPool, poolToUser, quote, pairAddress, uint32(dex))
 	}
 
+	if !isQuoteConfirmed {
+		trade.Type = pb.EventType_TRADE_UNKNOWN
+	}
+
 	return &core.Event{
 		ID:        trade.EventId,
 		EventType: uint32(trade.Type),
-		Key:       trade.Token, // base token 分区
+		Key:       trade.PairAddress,
 		Event: &pb.Event{
 			Event: &pb.Event_Trade{
 				Trade: trade,
@@ -80,6 +87,11 @@ func buildBuyEvent(
 		UserQuoteBalance:  userToPool.SrcPostBalance,
 	}
 
+	// 处理 SOL -> WSOL 的临时账户转账：若 WSOL 账户余额为 0 且为临时创建，则使用用户钱包中的 SOL 补充 quote 余额
+	if event.UserQuoteBalance == 0 && quote == consts.WSOLMint && userToPool.SrcWallet == poolToUser.DestWallet {
+		patchWSOLBalanceIfNeeded(ctx, event, userToPool.SrcAccount, userToPool.SrcWallet)
+	}
+
 	fillUsdEstimate(event, quote, ctx)
 	return event
 }
@@ -118,6 +130,11 @@ func buildSellEvent(
 		UserQuoteBalance:  poolToUser.DestPostBalance,
 	}
 
+	// 若 Quote 为 WSOL 且为临时账户（余额为 0），用 SOL 余额补充 Quote 余额。
+	if event.UserQuoteBalance == 0 && quote == consts.WSOLMint {
+		patchWSOLBalanceIfNeeded(ctx, event, poolToUser.DestAccount, poolToUser.DestWallet)
+	}
+
 	fillUsdEstimate(event, quote, ctx)
 	return event
 }
@@ -131,6 +148,25 @@ func fillUsdEstimate(event *pb.TradeEvent, quote types.Pubkey, ctx *ParserContex
 		event.AmountUsd = quoteAmount * quoteUsd
 		if baseAmount > 0 {
 			event.PriceUsd = event.AmountUsd / baseAmount
+		}
+	}
+}
+
+// patchWSOLBalanceIfNeeded 检查是否为临时 WSOL 账户，若是则使用钱包 SOL 补充 quote 余额。
+func patchWSOLBalanceIfNeeded(ctx *ParserContext, event *pb.TradeEvent, tmpAccount, wallet types.Pubkey) {
+	bal, ok := ctx.Balances[tmpAccount]
+	if !ok {
+		return
+	}
+	if bal.PreBalance != 0 || bal.PostBalance != 0 {
+		return
+	}
+	for _, signer := range ctx.Tx.Signers {
+		if bytes.Equal(wallet[:], signer) {
+			if solBal, ok := ctx.Tx.SolBalances[wallet]; ok {
+				event.UserQuoteBalance = solBal.PostBalance
+			}
+			return
 		}
 	}
 }

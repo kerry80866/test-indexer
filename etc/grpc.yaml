@@ -25,7 +25,7 @@ Grpc:
 PriceServiceConf:
   Endpoint: "127.0.0.1:8080"
   SyncIntervalS: 60
-  WSolPrice: 160 #需要改这个配置
+  WSolPrice: 153 #需要改这个配置
 
 TimeConf:
   SlotDispatchTimeoutMs: 2000       # 控制整个 slot dispatch 生命周期：发事件 + Redis + DB（毫秒）
@@ -35,7 +35,7 @@ TimeConf:
 KafkaProducerConf:
   Brokers: "172.19.3.15:9092"              # Kafka 服务器地址，多个地址用逗号分隔
   BatchSize: 32768                       # 批处理大小（32KB）
-  LingerMs: 5                            # 批处理延迟（毫秒）
+  LingerMs: 5                            # 批处理延迟（毫秒）,多久刷新一次Send缓存
   Topics:
     Balance: "dex_indexer_sol_balance"   # balance 事件的 topic 名称
     Event:   "dex_indexer_sol_event"     # 普通事件（如 swap/transfer）的 topic 名称

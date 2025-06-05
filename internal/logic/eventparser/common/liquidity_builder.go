@@ -74,7 +74,7 @@ func buildBaseLiquidityEvent(
 	return &core.Event{
 		ID:        liquidity.EventId,
 		EventType: uint32(liquidity.Type),
-		Key:       liquidity.Token,
+		Key:       liquidity.PairAddress,
 		Event: &pb.Event{
 			Event: &pb.Event_Liquidity{
 				Liquidity: liquidity,

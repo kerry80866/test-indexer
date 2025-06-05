@@ -15,10 +15,10 @@ const (
 
 // RegisterHandlers 注册 RaydiumV4 相关 Program 的指令解析器（仅处理 CLMM Program）
 func RegisterHandlers(m map[types.Pubkey]common.InstructionHandler) {
-	m[consts.PumpFunAMMProgram] = handlePumpfunAmmInstruction
+	m[consts.PumpFunAMMProgram] = handleInstruction
 }
 
-func handlePumpfunAmmInstruction(
+func handleInstruction(
 	ctx *common.ParserContext,
 	instrs []*core.AdaptedInstruction,
 	current int,

@@ -8,13 +8,7 @@ import (
 	pb "github.com/rpcpool/yellowstone-grpc/examples/golang/proto"
 )
 
-// buildFullAccountKeys 构造交易中完整的账户 Pubkey 列表。
-// 拼接 message.accountKeys 与 Address Lookup Table 中的 writable / readonly 地址，
-// 供后续通过 accountIndex 高效索引使用。
-//
-// 性能设计：
-//   - 一次性预分配切片，避免 append 扩容；
-//   - 顺序写入 + copy，有助于 CPU cache 命中；
+// buildFullAccountKeys 构造完整账户列表，合并 message.accountKeys 和 Address Lookup Table 地址，便于索引。
 func buildFullAccountKeys(
 	accountKeys, loadedWritable, loadedReadonly [][]byte,
 ) ([]types.Pubkey, error) {
@@ -53,17 +47,59 @@ func buildFullAccountKeys(
 	return pubkeys, nil
 }
 
-// buildAdaptedBalances 构建交易中的 TokenBalance 映射与 decimals 映射。
-// 处理 Pre/PostTokenBalances 中的标准 SPL Token 账户，返回：
+// buildSolBalances 构建交易的 SOL 余额变化映射（包含账户、余额前后快照、索引等）。
+func buildSolBalances(
+	tx *pb.SubscribeUpdateTransactionInfo,
+	accountKeys []types.Pubkey,
+) map[types.Pubkey]*core.SolBalance {
+	preList := tx.Meta.PreBalances   // 交易执行前余额列表
+	postList := tx.Meta.PostBalances // 交易执行后余额列表
+
+	balanceMap := make(map[types.Pubkey]*core.SolBalance, len(preList)+len(postList))
+
+	for i, preBalance := range preList {
+		account := accountKeys[i]
+		balanceMap[account] = &core.SolBalance{
+			Account:     account,
+			PreBalance:  preBalance,
+			PostBalance: 0,
+			TxIndex:     uint16(tx.Index),
+			InnerIndex:  uint16(i),
+		}
+	}
+
+	// 再补充 Post，如果账户存在则更新，否则新增
+	newIndex := len(preList)
+	for i, postBalance := range postList {
+		account := accountKeys[i]
+		if tb, ok := balanceMap[account]; ok {
+			tb.PostBalance = postBalance
+		} else {
+			balanceMap[account] = &core.SolBalance{
+				Account:     account,
+				PreBalance:  0,
+				PostBalance: postBalance,
+				TxIndex:     uint16(tx.Index),
+				InnerIndex:  uint16(newIndex),
+			}
+			newIndex++
+		}
+	}
+
+	return balanceMap
+}
+
+// buildBalances 构建交易中的 Token 余额变化及 mint → decimals 映射（含去重与所有权信息）。
+// 返回：
 //   - balanceMap：token account → TokenBalance（含 mint、owner、pre/post 余额等）
 //   - tokenDecimals：当前交易中涉及的 mint → decimals（去重 + 有序）
-func buildAdaptedBalances(
+func buildBalances(
 	owners map[string]types.Pubkey,
 	tx *pb.SubscribeUpdateTransactionInfo,
 	accountKeys []types.Pubkey,
 ) (map[types.Pubkey]*core.TokenBalance, []core.TokenDecimals) {
-	postList := tx.Meta.PostTokenBalances
 	preList := tx.Meta.PreTokenBalances
+	postList := tx.Meta.PostTokenBalances
 
 	// token account 数量预估，用于预分配 map 和 mintResolver 缓存
 	capacity := len(preList) + len(postList)
@@ -78,8 +114,7 @@ func buildAdaptedBalances(
 	ownerResolver := newOwnerResolver(owners)
 
 	// 先处理 Post（代表账户最终状态），初始化结构，PreBalance 默认为 0
-	index := uint16(0)
-	for _, post := range postList {
+	for i, post := range postList {
 		// 仅处理标准 SPL Token（TokenProgram / Token2022），跳过非标准模拟账户
 		if utils.IsSPLToken(post.ProgramId) {
 			account := accountKeys[post.AccountIndex]
@@ -91,13 +126,13 @@ func buildAdaptedBalances(
 				PostOwner:    ownerResolver.resolve(post.Owner),
 				Decimals:     decimals,
 				TxIndex:      uint16(tx.Index),
-				InnerIndex:   index,
+				InnerIndex:   uint16(i),
 			}
-			index++
 		}
 	}
 
 	// 再补充 Pre（如账户只出现在 Pre 中，说明可能被销毁）
+	newIndex := len(preList)
 	for _, pre := range preList {
 		// 仅处理标准 SPL Token（TokenProgram / Token2022），跳过非标准模拟账户
 		if utils.IsSPLToken(pre.ProgramId) {
@@ -120,9 +155,9 @@ func buildAdaptedBalances(
 					PreBalance:   utils.ParseUint64(pre.UiTokenAmount.Amount),
 					Decimals:     decimals,
 					TxIndex:      uint16(tx.Index),
-					InnerIndex:   index,
+					InnerIndex:   uint16(newIndex),
 				}
-				index++
+				newIndex++
 			}
 		}
 	}
@@ -130,11 +165,8 @@ func buildAdaptedBalances(
 	return balanceMap, mintResolver.buildTokenDecimals()
 }
 
-// buildAdaptedInstructions 扁平化解析主指令与 inner 指令，输出统一结构。
-// 每条主指令与其 inner 指令将展开为多条 AdaptedInstruction：
-//   - IxIndex：主指令索引；
-//   - InnerIndex：0 表示主指令，1及以上表示对应的 inner 指令序号。
-func buildAdaptedInstructions(
+// buildInstructions 扁平化主指令与 inner 指令，生成统一的 AdaptedInstruction 列表。
+func buildInstructions(
 	tx *pb.SubscribeUpdateTransactionInfo,
 	accountKeys []types.Pubkey,
 ) []*core.AdaptedInstruction {
@@ -220,10 +252,10 @@ func AdaptGrpcTx(txCtx *core.TxContext, owners map[string]types.Pubkey, tx *pb.S
 	}
 
 	// 解析主指令和 inner 指令
-	instructions := buildAdaptedInstructions(tx, accountKeys)
+	instructions := buildInstructions(tx, accountKeys)
 
 	// 解析 pre/post token 余额 + decimals 信息
-	balances, tokenDecimals := buildAdaptedBalances(owners, tx, accountKeys)
+	balances, tokenDecimals := buildBalances(owners, tx, accountKeys)
 
 	// 构造签名者列表：Solana 中交易前 N 个账户即为 signer
 	signers := make([][]byte, signerCount)
@@ -238,6 +270,7 @@ func AdaptGrpcTx(txCtx *core.TxContext, owners map[string]types.Pubkey, tx *pb.S
 		Signature:     tx.Transaction.Signatures[0],
 		Signers:       signers,
 		Instructions:  instructions,
+		SolBalances:   buildSolBalances(tx, accountKeys),
 		Balances:      balances,
 		TokenDecimals: tokenDecimals,
 	}, nil

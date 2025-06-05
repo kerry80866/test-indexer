@@ -1,4 +1,4 @@
-package raydiumclmm
+package pumpfun
 
 import (
 	"dex-indexer-sol/internal/consts"
@@ -9,13 +9,13 @@ import (
 )
 
 const (
-	Swap   uint64 = 0xf8c69e91e17587c8
-	SwapV2 uint64 = 0x2b04ed0b1ac91e62
+	Buy  uint64 = 0x66063d1201daebea
+	Sell uint64 = 0x33e685a4017f83ad
 )
 
 // RegisterHandlers 注册 RaydiumV4 相关 Program 的指令解析器（仅处理 CLMM Program）
 func RegisterHandlers(m map[types.Pubkey]common.InstructionHandler) {
-	m[consts.RaydiumCLMMProgram] = handleInstruction
+	m[consts.PumpFunProgram] = handleInstruction
 }
 
 func handleInstruction(
@@ -32,8 +32,10 @@ func handleInstruction(
 
 	// 提取前 8 字节方法编号，进行分发
 	switch binary.BigEndian.Uint64(ix.Data[:8]) {
-	case Swap, SwapV2:
-		return extractSwapEvent(ctx, instrs, current)
+	case Buy:
+		return extractSwapEvent(ctx, instrs, current, true)
+	case Sell:
+		return extractSwapEvent(ctx, instrs, current, false)
 
 	default:
 		// 未识别的指令，直接跳过

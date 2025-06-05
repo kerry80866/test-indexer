@@ -52,15 +52,16 @@ func extractSwapEvent(
 		UserToken2AccountIndex: accountOffset + 15,
 		PoolToken1AccountIndex: accountOffset + 4,
 		PoolToken2AccountIndex: accountOffset + 5,
-	}, 2)
+	}, 4)
 	if result == nil {
 		logger.Errorf("[RaydiumV4:extractSwapEvent] 转账结构缺失: tx=%s", ctx.TxHashString())
 		return nil, current + 1
 	}
 
+	// 优先尝试使用自定义优先级的quote token（WSOL、USDC、USDT等）
 	quote, ok := utils.ChooseQuote(result.UserToPool.Token, result.PoolToUser.Token)
 	if !ok {
-		// 默认认为 PoolToken2（account[5]）为 quote token
+		// 使用池子默认quote token
 		if result.UserToPool.DestAccount == ix.Accounts[accountOffset+5] {
 			quote = result.UserToPool.Token
 		} else {
@@ -69,7 +70,7 @@ func extractSwapEvent(
 	}
 
 	pairAddress := ix.Accounts[1]
-	event := common.BuildTradeEvent(ctx, ix, result.UserToPool, result.PoolToUser, pairAddress, quote, consts.DexRaydiumV4)
+	event := common.BuildTradeEvent(ctx, ix, result.UserToPool, result.PoolToUser, pairAddress, quote, true, consts.DexRaydiumV4)
 	if event == nil {
 		return nil, current + 1
 	}

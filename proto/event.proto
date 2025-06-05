@@ -16,6 +16,8 @@ enum EventType {
   REMOVE_LIQUIDITY = 5;
   MINT_TO = 6;
   BURN = 7;
+  TRADE_UNKNOWN = 8;
+  CREATE_POOL = 9;
 
   // --- 系统/同步类事件（编号从 60 开始） ---
   BALANCE_UPDATE = 60;

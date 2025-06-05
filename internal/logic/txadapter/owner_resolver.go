@@ -19,6 +19,8 @@ func (r *ownerResolver) resolve(base58Str string) types.Pubkey {
 	switch base58Str {
 	case consts.RaydiumV4AuthorityStr:
 		return consts.RaydiumV4Authority
+	case consts.RaydiumCPMMAuthorityStr:
+		return consts.RaydiumCPMMAuthority
 	case consts.PumpFunAMMFee1Str:
 		return consts.PumpFunAMMFee1
 	case consts.PumpFunAMMFee4Str:

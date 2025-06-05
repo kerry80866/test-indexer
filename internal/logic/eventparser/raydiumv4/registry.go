@@ -18,11 +18,11 @@ const (
 
 // RegisterHandlers 注册 RaydiumV4 的所有指令处理逻辑
 func RegisterHandlers(m map[types.Pubkey]common.InstructionHandler) {
-	m[consts.RaydiumV4Program] = handleRaydiumV4Instruction
+	m[consts.RaydiumV4Program] = handleInstruction
 }
 
-// handleRaydiumV4Instruction 是 RaydiumV4 的主分发入口
-func handleRaydiumV4Instruction(
+// handleInstruction 是 RaydiumV4 的主分发入口
+func handleInstruction(
 	ctx *common.ParserContext,
 	instrs []*core.AdaptedInstruction,
 	current int,

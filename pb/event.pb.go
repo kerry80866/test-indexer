@@ -34,6 +34,8 @@ const (
 	EventType_REMOVE_LIQUIDITY EventType = 5
 	EventType_MINT_TO          EventType = 6
 	EventType_BURN             EventType = 7
+	EventType_TRADE_UNKNOWN    EventType = 8
+	EventType_CREATE_POOL      EventType = 9
 	// --- 系统/同步类事件（编号从 60 开始） ---
 	EventType_BALANCE_UPDATE EventType = 60
 )
@@ -49,6 +51,8 @@ var (
 		5:  "REMOVE_LIQUIDITY",
 		6:  "MINT_TO",
 		7:  "BURN",
+		8:  "TRADE_UNKNOWN",
+		9:  "CREATE_POOL",
 		60: "BALANCE_UPDATE",
 	}
 	EventType_value = map[string]int32{
@@ -60,6 +64,8 @@ var (
 		"REMOVE_LIQUIDITY": 5,
 		"MINT_TO":          6,
 		"BURN":             7,
+		"TRADE_UNKNOWN":    8,
+		"CREATE_POOL":      9,
 		"BALANCE_UPDATE":   60,
 	}
 )
@@ -1439,7 +1445,7 @@ const file_event_proto_rawDesc = "" +
 	"preBalance\x12!\n" +
 	"\fpost_balance\x18\t \x01(\x04R\vpostBalance\x12\x1a\n" +
 	"\bdecimals\x18\n" +
-	" \x01(\rR\bdecimals*\x99\x01\n" +
+	" \x01(\rR\bdecimals*\xbd\x01\n" +
 	"\tEventType\x12\v\n" +
 	"\aUNKNOWN\x10\x00\x12\r\n" +
 	"\tTRADE_BUY\x10\x01\x12\x0e\n" +
@@ -1449,7 +1455,9 @@ const file_event_proto_rawDesc = "" +
 	"\rADD_LIQUIDITY\x10\x04\x12\x14\n" +
 	"\x10REMOVE_LIQUIDITY\x10\x05\x12\v\n" +
 	"\aMINT_TO\x10\x06\x12\b\n" +
-	"\x04BURN\x10\a\x12\x12\n" +
+	"\x04BURN\x10\a\x12\x11\n" +
+	"\rTRADE_UNKNOWN\x10\b\x12\x0f\n" +
+	"\vCREATE_POOL\x10\t\x12\x12\n" +
 	"\x0eBALANCE_UPDATE\x10<B\x17Z\x15dex-indexer-sol/pb;pbb\x06proto3"
 
 var (

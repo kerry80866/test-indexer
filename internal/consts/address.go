@@ -26,6 +26,7 @@ const (
 	// DEX: Raydium
 	RaydiumV4ProgramStr   = "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"
 	RaydiumCLMMProgramStr = "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK"
+	RaydiumCPMMProgramStr = "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C"
 
 	// DEX: PumpFun
 	PumpFunAMMProgramStr = "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA"
@@ -34,18 +35,17 @@ const (
 	// DEX: Meteora
 	MeteoraDLMMProgramStr = "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo"
 
+	// DEX: OrcaWhirlpoolProgram
+	OrcaWhirlpoolProgramStr = "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"
+
 	// Known Owner Addresses
-	RaydiumV4AuthorityStr = "5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1"
-	PumpFunAMMFee1Str     = "FWsW1xNtWscwNmKv6wVsU1iTzRN6wmmk3MjxRP5tT7hz"
-	PumpFunAMMFee2Str     = ""
-	PumpFunAMMFee3Str     = ""
-	PumpFunAMMFee4Str     = "9rPYyANsfQZw3DnDmKE3YCQF5E8oD89UXoHn9JFEhJUz"
-	PumpFunAMMFee5Str     = "7VtfL8fvgNfhz17qKRMjzQEXgbdpnHHHQRh54R9jP2RJ"
-	PumpFunAMMFee6Str     = "AVmoTthdrX6tKt4nDjco2D775W2YK3sDhxPcMmzUAmTY"
-	PumpFunAMMFee7Str     = ""
-	PumpFunAMMFee8Str     = "JCRGumoE9Qi5BBgULTgdgTLjSgkCMSbF62ZZfGs84JeU"
-	PumpFunAMMFee9Str     = ""
-	PumpFunAMMFee10Str    = ""
+	RaydiumV4AuthorityStr   = "5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1"
+	RaydiumCPMMAuthorityStr = "GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxFbL"
+	PumpFunAMMFee1Str       = "FWsW1xNtWscwNmKv6wVsU1iTzRN6wmmk3MjxRP5tT7hz"
+	PumpFunAMMFee4Str       = "9rPYyANsfQZw3DnDmKE3YCQF5E8oD89UXoHn9JFEhJUz"
+	PumpFunAMMFee5Str       = "7VtfL8fvgNfhz17qKRMjzQEXgbdpnHHHQRh54R9jP2RJ"
+	PumpFunAMMFee6Str       = "AVmoTthdrX6tKt4nDjco2D775W2YK3sDhxPcMmzUAmTY"
+	PumpFunAMMFee8Str       = "JCRGumoE9Qi5BBgULTgdgTLjSgkCMSbF62ZZfGs84JeU"
 )
 
 var (
@@ -76,19 +76,20 @@ var (
 	BSOLMint    = types.PubkeyFromBase58(BSOLMintStr)
 
 	// DEX Program
-	RaydiumV4Program   = types.PubkeyFromBase58(RaydiumV4ProgramStr)
-	RaydiumCLMMProgram = types.PubkeyFromBase58(RaydiumCLMMProgramStr)
-	PumpFunProgram     = types.PubkeyFromBase58(PumpFunProgramStr)
-	PumpFunAMMProgram  = types.PubkeyFromBase58(PumpFunAMMProgramStr)
-	MeteoraDLMMProgram = types.PubkeyFromBase58(MeteoraDLMMProgramStr)
+	RaydiumV4Program     = types.PubkeyFromBase58(RaydiumV4ProgramStr)
+	RaydiumCLMMProgram   = types.PubkeyFromBase58(RaydiumCLMMProgramStr)
+	RaydiumCPMMProgram   = types.PubkeyFromBase58(RaydiumCPMMProgramStr)
+	PumpFunProgram       = types.PubkeyFromBase58(PumpFunProgramStr)
+	PumpFunAMMProgram    = types.PubkeyFromBase58(PumpFunAMMProgramStr)
+	MeteoraDLMMProgram   = types.PubkeyFromBase58(MeteoraDLMMProgramStr)
+	OrcaWhirlpoolProgram = types.PubkeyFromBase58(OrcaWhirlpoolProgramStr)
 
 	// Known Owner
-	RaydiumV4Authority = types.PubkeyFromBase58(RaydiumV4AuthorityStr)
-	PumpFunAMMFee1     = types.PubkeyFromBase58(PumpFunAMMFee1Str)
-	//PumpFunAMMFee2     = types.PubkeyFromBase58(PumpFunAMMFee2Str)
-	//PumpFunAMMFee3     = types.PubkeyFromBase58(PumpFunAMMFee3Str)
-	PumpFunAMMFee4 = types.PubkeyFromBase58(PumpFunAMMFee4Str)
-	PumpFunAMMFee5 = types.PubkeyFromBase58(PumpFunAMMFee5Str)
-	PumpFunAMMFee6 = types.PubkeyFromBase58(PumpFunAMMFee6Str)
-	PumpFunAMMFee8 = types.PubkeyFromBase58(PumpFunAMMFee8Str)
+	RaydiumV4Authority   = types.PubkeyFromBase58(RaydiumV4AuthorityStr)
+	RaydiumCPMMAuthority = types.PubkeyFromBase58(RaydiumCPMMAuthorityStr)
+	PumpFunAMMFee1       = types.PubkeyFromBase58(PumpFunAMMFee1Str)
+	PumpFunAMMFee4       = types.PubkeyFromBase58(PumpFunAMMFee4Str)
+	PumpFunAMMFee5       = types.PubkeyFromBase58(PumpFunAMMFee5Str)
+	PumpFunAMMFee6       = types.PubkeyFromBase58(PumpFunAMMFee6Str)
+	PumpFunAMMFee8       = types.PubkeyFromBase58(PumpFunAMMFee8Str)
 )
