@@ -31,31 +31,34 @@ import (
 //  16. `[writable]` 用户 destination token 账户（实际获得 token）
 //  17. `[signer]`   用户钱包账户（仅在账户数为 18 时存在）
 
-// extractSwapEvent 解析 Raydium V4 swap 事件，构造 TradeEvent（BUY / SELL）
+// extractSwapEvent 尝试解析当前指令为 Raydium V4 的 Swap 操作，构造 TradeEvent（BUY / SELL）。
+// 若结构匹配，则生成事件并添加至上下文。
 func extractSwapEvent(
 	ctx *common.ParserContext,
 	instrs []*core.AdaptedInstruction,
 	current int,
-) (*core.Event, int) {
+) int {
 	ix := instrs[current]
 
 	// Raydium V4 固定结构为 17 或 18 个账户
 	accountCount := len(ix.Accounts)
 	if accountCount != 17 && accountCount != 18 {
 		logger.Errorf("[RaydiumV4:extractSwapEvent] 账户数量非法: tx=%s", ctx.TxHashString())
-		return nil, current + 1
+		return -1
 	}
 	accountOffset := accountCount - 17
 
+	// 提取 Swap 转账结构（包含 user → pool 和 pool → user 的 transfer）
 	result := common.FindSwapTransfersByIndex(ctx, instrs, current, &common.SwapInstructionIndex{
 		UserToken1AccountIndex: accountOffset + 14,
 		UserToken2AccountIndex: accountOffset + 15,
 		PoolToken1AccountIndex: accountOffset + 4,
 		PoolToken2AccountIndex: accountOffset + 5,
-	}, 4)
+	}, 6)
 	if result == nil {
-		logger.Errorf("[RaydiumV4:extractSwapEvent] 转账结构缺失: tx=%s", ctx.TxHashString())
-		return nil, current + 1
+		logger.Errorf("[RaydiumV4:extractSwapEvent] 转账结构缺失: tx=%s, ix=%d, inner=%d",
+			ctx.TxHashString(), ix.IxIndex, ix.InnerIndex)
+		return -1
 	}
 
 	// 优先尝试使用自定义优先级的quote token（WSOL、USDC、USDT等）
@@ -69,11 +72,13 @@ func extractSwapEvent(
 		}
 	}
 
+	// 构建标准 TradeEvent（BUY / SELL 类型）
 	pairAddress := ix.Accounts[1]
 	event := common.BuildTradeEvent(ctx, ix, result.UserToPool, result.PoolToUser, pairAddress, quote, true, consts.DexRaydiumV4)
 	if event == nil {
-		return nil, current + 1
+		return -1
 	}
 
-	return event, result.MaxIndex + 1
+	ctx.AddEvent(event)
+	return result.MaxIndex + 1
 }

@@ -6,6 +6,7 @@ require (
 	github.com/blocto/solana-go-sdk v1.30.0
 	github.com/confluentinc/confluent-kafka-go/v2 v2.10.0
 	github.com/mr-tron/base58 v1.2.0
+	github.com/near/borsh-go v0.3.2-0.20220516180422-1ff87d108454
 	github.com/redis/go-redis/v9 v9.8.0
 	github.com/rpcpool/yellowstone-grpc/examples/golang v0.0.0-20250507132354-a884a0b8bbb7
 	github.com/stretchr/testify v1.10.0
@@ -13,6 +14,7 @@ require (
 	go.uber.org/zap v1.24.0
 	google.golang.org/grpc v1.67.1
 	google.golang.org/protobuf v1.36.5
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 
 require (
@@ -30,7 +32,6 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
-	github.com/near/borsh-go v0.3.2-0.20220516180422-1ff87d108454 // indirect
 	github.com/openzipkin/zipkin-go v0.4.3 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
@@ -58,7 +59,6 @@ require (
 	golang.org/x/text v0.25.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240814211410-ddb44dafa142 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240814211410-ddb44dafa142 // indirect
-	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

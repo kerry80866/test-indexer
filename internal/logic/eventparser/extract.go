@@ -36,7 +36,7 @@ func Init() {
 func ExtractEventsFromTx(adaptedTx *core.AdaptedTx) (result []*core.Event) {
 	defer func() {
 		if r := recover(); r != nil {
-			txHash := base58.Encode(adaptedTx.Signature) // 只有 panic 才执行编码
+			txHash := base58.Encode(adaptedTx.Signature)
 			logger.Errorf("[eventparser::ExtractEventsFromTx] panic tx=%s: %+v\nstack: %s", txHash, r, debug.Stack())
 			result = nil
 		}
@@ -45,21 +45,18 @@ func ExtractEventsFromTx(adaptedTx *core.AdaptedTx) (result []*core.Event) {
 	ctx := common.BuildParserContext(adaptedTx)
 	instrs := ctx.Tx.Instructions
 
-	// 预处理：扫描 InitializeAccount 指令，补全 TokenAccount → Mint → Owner 映射
+	// 扫描 InitializeAccount 指令，补全 TokenAccount → Mint → Owner 映射
 	common.PreScanInitAccountBalances(ctx, instrs)
 
-	result = make([]*core.Event, 0, len(instrs))
 	for i := 0; i < len(instrs); {
 		ix := instrs[i]
 		if handler, ok := handlers[ix.ProgramID]; ok {
-			event, next := handler(ctx, instrs, i)
-			if event != nil {
-				result = append(result, event)
+			if next := handler(ctx, instrs, i); next > i {
+				i = next
+				continue
 			}
-			i = next
-		} else {
-			i++
 		}
+		i++
 	}
-	return result
+	return ctx.TakeEvents()
 }

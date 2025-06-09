@@ -21,6 +21,70 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type DexType int32
+
+const (
+	DexType_DEX_UNKNOWN        DexType = 0 // 未知 DEX 类型
+	DexType_DEX_RAYDIUM_V4     DexType = 1 // Raydium V4（限价订单簿 + AMM）
+	DexType_DEX_RAYDIUM_CLMM   DexType = 2 // Raydium CLMM（集中流动性）
+	DexType_DEX_PUMPFUN_AMM    DexType = 3 // Pump.fun AMM 外盘
+	DexType_DEX_PUMPFUN        DexType = 4 // Pump.fun 内盘（伪撮合）
+	DexType_DEX_RAYDIUM_CPMM   DexType = 5 // Raydium CPMM
+	DexType_DEX_METEORA_DLMM   DexType = 6 // Meteora DLMM
+	DexType_DEX_ORCA_WHIRLPOOL DexType = 7 // Orca Whirlpool（集中流动性）
+)
+
+// Enum value maps for DexType.
+var (
+	DexType_name = map[int32]string{
+		0: "DEX_UNKNOWN",
+		1: "DEX_RAYDIUM_V4",
+		2: "DEX_RAYDIUM_CLMM",
+		3: "DEX_PUMPFUN_AMM",
+		4: "DEX_PUMPFUN",
+		5: "DEX_RAYDIUM_CPMM",
+		6: "DEX_METEORA_DLMM",
+		7: "DEX_ORCA_WHIRLPOOL",
+	}
+	DexType_value = map[string]int32{
+		"DEX_UNKNOWN":        0,
+		"DEX_RAYDIUM_V4":     1,
+		"DEX_RAYDIUM_CLMM":   2,
+		"DEX_PUMPFUN_AMM":    3,
+		"DEX_PUMPFUN":        4,
+		"DEX_RAYDIUM_CPMM":   5,
+		"DEX_METEORA_DLMM":   6,
+		"DEX_ORCA_WHIRLPOOL": 7,
+	}
+)
+
+func (x DexType) Enum() *DexType {
+	p := new(DexType)
+	*p = x
+	return p
+}
+
+func (x DexType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (DexType) Descriptor() protoreflect.EnumDescriptor {
+	return file_event_proto_enumTypes[0].Descriptor()
+}
+
+func (DexType) Type() protoreflect.EnumType {
+	return &file_event_proto_enumTypes[0]
+}
+
+func (x DexType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use DexType.Descriptor instead.
+func (DexType) EnumDescriptor() ([]byte, []int) {
+	return file_event_proto_rawDescGZIP(), []int{0}
+}
+
 // 枚举定义：统一的事件类型标识
 type EventType int32
 
@@ -36,6 +100,7 @@ const (
 	EventType_BURN             EventType = 7
 	EventType_TRADE_UNKNOWN    EventType = 8
 	EventType_CREATE_POOL      EventType = 9
+	EventType_MIGRATE          EventType = 10
 	// --- 系统/同步类事件（编号从 60 开始） ---
 	EventType_BALANCE_UPDATE EventType = 60
 )
@@ -53,6 +118,7 @@ var (
 		7:  "BURN",
 		8:  "TRADE_UNKNOWN",
 		9:  "CREATE_POOL",
+		10: "MIGRATE",
 		60: "BALANCE_UPDATE",
 	}
 	EventType_value = map[string]int32{
@@ -66,6 +132,7 @@ var (
 		"BURN":             7,
 		"TRADE_UNKNOWN":    8,
 		"CREATE_POOL":      9,
+		"MIGRATE":          10,
 		"BALANCE_UPDATE":   60,
 	}
 )
@@ -81,11 +148,11 @@ func (x EventType) String() string {
 }
 
 func (EventType) Descriptor() protoreflect.EnumDescriptor {
-	return file_event_proto_enumTypes[0].Descriptor()
+	return file_event_proto_enumTypes[1].Descriptor()
 }
 
 func (EventType) Type() protoreflect.EnumType {
-	return &file_event_proto_enumTypes[0]
+	return &file_event_proto_enumTypes[1]
 }
 
 func (x EventType) Number() protoreflect.EnumNumber {
@@ -94,17 +161,18 @@ func (x EventType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use EventType.Descriptor instead.
 func (EventType) EnumDescriptor() ([]byte, []int) {
-	return file_event_proto_rawDescGZIP(), []int{0}
+	return file_event_proto_rawDescGZIP(), []int{1}
 }
 
 // slot级别的事件数组（封装一个 slot 的全部事件）
 type Events struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Version       uint32                 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`                // 批量消息结构版本号（用于升级兼容）
-	ChainId       uint32                 `protobuf:"varint,2,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty"` // 链 ID，例如 100000 = Solana
-	Slot          uint64                 `protobuf:"varint,3,opt,name=slot,proto3" json:"slot,omitempty"`                      // 所属 slot
-	Source        int32                  `protobuf:"varint,4,opt,name=source,proto3" json:"source,omitempty"`                  // 数据来源：1=GRPC补块，2=RPC推送
-	Events        []*Event               `protobuf:"bytes,5,rep,name=events,proto3" json:"events,omitempty"`                   // 事件数组
+	Version       uint32                 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`                     // 批量消息结构版本号（用于升级兼容）
+	ChainId       uint32                 `protobuf:"varint,2,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty"`      // 链 ID，例如 100000 = Solana
+	Slot          uint64                 `protobuf:"varint,3,opt,name=slot,proto3" json:"slot,omitempty"`                           // 所属 slot
+	Source        int32                  `protobuf:"varint,4,opt,name=source,proto3" json:"source,omitempty"`                       // 数据来源：1=GRPC补块，2=RPC推送
+	Events        []*Event               `protobuf:"bytes,5,rep,name=events,proto3" json:"events,omitempty"`                        // 事件数组
+	BlockHash     []byte                 `protobuf:"bytes,6,opt,name=block_hash,json=blockHash,proto3" json:"block_hash,omitempty"` // 区块哈希（blockhash）
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -174,6 +242,13 @@ func (x *Events) GetEvents() []*Event {
 	return nil
 }
 
+func (x *Events) GetBlockHash() []byte {
+	if x != nil {
+		return x.BlockHash
+	}
+	return nil
+}
+
 // 通用事件包装结构（每条只封装一个子类型）
 type Event struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -185,6 +260,7 @@ type Event struct {
 	//	*Event_Mint
 	//	*Event_Burn
 	//	*Event_Balance
+	//	*Event_Migrate
 	Event         isEvent_Event `protobuf_oneof:"event"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -281,6 +357,15 @@ func (x *Event) GetBalance() *BalanceUpdateEvent {
 	return nil
 }
 
+func (x *Event) GetMigrate() *MigrateEvent {
+	if x != nil {
+		if x, ok := x.Event.(*Event_Migrate); ok {
+			return x.Migrate
+		}
+	}
+	return nil
+}
+
 type isEvent_Event interface {
 	isEvent_Event()
 }
@@ -309,6 +394,10 @@ type Event_Balance struct {
 	Balance *BalanceUpdateEvent `protobuf:"bytes,6,opt,name=balance,proto3,oneof"`
 }
 
+type Event_Migrate struct {
+	Migrate *MigrateEvent `protobuf:"bytes,7,opt,name=migrate,proto3,oneof"`
+}
+
 func (*Event_Trade) isEvent_Event() {}
 
 func (*Event_Transfer) isEvent_Event() {}
@@ -320,6 +409,8 @@ func (*Event_Mint) isEvent_Event() {}
 func (*Event_Burn) isEvent_Event() {}
 
 func (*Event_Balance) isEvent_Event() {}
+
+func (*Event_Migrate) isEvent_Event() {}
 
 // 交易事件（token统一表示base token）
 type TradeEvent struct {
@@ -711,7 +802,7 @@ type LiquidityEvent struct {
 	UserWallet             []byte                 `protobuf:"bytes,7,opt,name=user_wallet,json=userWallet,proto3" json:"user_wallet,omitempty"`                                          // 用户钱包地址（通常与 signers 一致）
 	TokenDecimals          uint32                 `protobuf:"varint,8,opt,name=token_decimals,json=tokenDecimals,proto3" json:"token_decimals,omitempty"`                                // token（即 base token）的精度
 	QuoteDecimals          uint32                 `protobuf:"varint,9,opt,name=quote_decimals,json=quoteDecimals,proto3" json:"quote_decimals,omitempty"`                                // quote token 的精度
-	Dex                    uint32                 `protobuf:"varint,10,opt,name=dex,proto3" json:"dex,omitempty"`                                                                        // 所属 DEX 平台编号（例如 Raydium = 1）
+	Dex                    uint32                 `protobuf:"varint,10,opt,name=dex,proto3" json:"dex,omitempty"`                                                                        // 所属 DEX 平台编号（例如 RaydiumV4 = 1）
 	TokenAmount            uint64                 `protobuf:"varint,11,opt,name=token_amount,json=tokenAmount,proto3" json:"token_amount,omitempty"`                                     // token 添加/移除的数量（base token）
 	QuoteTokenAmount       uint64                 `protobuf:"varint,12,opt,name=quote_token_amount,json=quoteTokenAmount,proto3" json:"quote_token_amount,omitempty"`                    // quote token 添加/移除的数量
 	Token                  []byte                 `protobuf:"bytes,13,opt,name=token,proto3" json:"token,omitempty"`                                                                     // token 的 mint 地址（base token）
@@ -1303,24 +1394,319 @@ func (x *BalanceUpdateEvent) GetDecimals() uint32 {
 	return 0
 }
 
+type MigrateEvent struct {
+	state                      protoimpl.MessageState `protogen:"open.v1"`
+	Type                       EventType              `protobuf:"varint,1,opt,name=type,proto3,enum=pb.EventType" json:"type,omitempty"`                                                                   // 事件类型（MIGRATE）
+	EventId                    uint64                 `protobuf:"varint,2,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`                                                                // 事件唯一 ID（slot << 32 | tx_index << 16 | ix_index << 8 | inner_index）
+	Slot                       uint64                 `protobuf:"varint,3,opt,name=slot,proto3" json:"slot,omitempty"`                                                                                     // 区块高度
+	BlockTime                  int64                  `protobuf:"varint,4,opt,name=block_time,json=blockTime,proto3" json:"block_time,omitempty"`                                                          // 区块时间戳（秒）
+	TxHash                     []byte                 `protobuf:"bytes,5,opt,name=tx_hash,json=txHash,proto3" json:"tx_hash,omitempty"`                                                                    // 交易哈希
+	Signers                    [][]byte               `protobuf:"bytes,6,rep,name=signers,proto3" json:"signers,omitempty"`                                                                                // 签名者地址列表
+	UserWallet                 []byte                 `protobuf:"bytes,7,opt,name=user_wallet,json=userWallet,proto3" json:"user_wallet,omitempty"`                                                        // 用户地址，可能是代理操作地址（如 Pump.fun: Migration），不一定是实际用户钱包
+	DestPoolCreator            []byte                 `protobuf:"bytes,8,opt,name=dest_pool_creator,json=destPoolCreator,proto3" json:"dest_pool_creator,omitempty"`                                       // 新池创建者
+	SrcDex                     uint32                 `protobuf:"varint,9,opt,name=src_dex,json=srcDex,proto3" json:"src_dex,omitempty"`                                                                   // 来源 DEX 编号（如 Pump.fun = 4）
+	DestDex                    uint32                 `protobuf:"varint,10,opt,name=dest_dex,json=destDex,proto3" json:"dest_dex,omitempty"`                                                               // 目标 DEX 编号（如 Pump.fun AMM = 3）
+	TokenDecimals              uint32                 `protobuf:"varint,11,opt,name=token_decimals,json=tokenDecimals,proto3" json:"token_decimals,omitempty"`                                             // base token 精度
+	QuoteDecimals              uint32                 `protobuf:"varint,12,opt,name=quote_decimals,json=quoteDecimals,proto3" json:"quote_decimals,omitempty"`                                             // quote token 精度
+	TokenAmount                uint64                 `protobuf:"varint,13,opt,name=token_amount,json=tokenAmount,proto3" json:"token_amount,omitempty"`                                                   // base token 数量
+	QuoteTokenAmount           uint64                 `protobuf:"varint,14,opt,name=quote_token_amount,json=quoteTokenAmount,proto3" json:"quote_token_amount,omitempty"`                                  // quote token 数量
+	MigrationFee               uint64                 `protobuf:"varint,15,opt,name=migration_fee,json=migrationFee,proto3" json:"migration_fee,omitempty"`                                                // 迁移手续费
+	Token                      []byte                 `protobuf:"bytes,16,opt,name=token,proto3" json:"token,omitempty"`                                                                                   // base token mint
+	SrcQuoteToken              []byte                 `protobuf:"bytes,17,opt,name=src_quote_token,json=srcQuoteToken,proto3" json:"src_quote_token,omitempty"`                                            // 来源 quote token（如 SOL）
+	DestQuoteToken             []byte                 `protobuf:"bytes,18,opt,name=dest_quote_token,json=destQuoteToken,proto3" json:"dest_quote_token,omitempty"`                                         // 目标 quote token（如 WSOL）
+	SrcPairAddress             []byte                 `protobuf:"bytes,19,opt,name=src_pair_address,json=srcPairAddress,proto3" json:"src_pair_address,omitempty"`                                         // 来源池地址
+	DestPairAddress            []byte                 `protobuf:"bytes,20,opt,name=dest_pair_address,json=destPairAddress,proto3" json:"dest_pair_address,omitempty"`                                      // 目标池地址
+	SrcTokenAccount            []byte                 `protobuf:"bytes,21,opt,name=src_token_account,json=srcTokenAccount,proto3" json:"src_token_account,omitempty"`                                      // 来源池 base token account
+	DestTokenAccount           []byte                 `protobuf:"bytes,22,opt,name=dest_token_account,json=destTokenAccount,proto3" json:"dest_token_account,omitempty"`                                   // 目标池 base token account
+	SrcQuoteTokenAccount       []byte                 `protobuf:"bytes,23,opt,name=src_quote_token_account,json=srcQuoteTokenAccount,proto3" json:"src_quote_token_account,omitempty"`                     // 来源池 quote token account
+	DestQuoteTokenAccount      []byte                 `protobuf:"bytes,24,opt,name=dest_quote_token_account,json=destQuoteTokenAccount,proto3" json:"dest_quote_token_account,omitempty"`                  // 目标池 quote token account
+	SrcTokenAccountOwner       []byte                 `protobuf:"bytes,25,opt,name=src_token_account_owner,json=srcTokenAccountOwner,proto3" json:"src_token_account_owner,omitempty"`                     // 来源池 base token account 所有者
+	DestTokenAccountOwner      []byte                 `protobuf:"bytes,26,opt,name=dest_token_account_owner,json=destTokenAccountOwner,proto3" json:"dest_token_account_owner,omitempty"`                  // 目标池 base token account 所有者
+	SrcQuoteTokenAccountOwner  []byte                 `protobuf:"bytes,27,opt,name=src_quote_token_account_owner,json=srcQuoteTokenAccountOwner,proto3" json:"src_quote_token_account_owner,omitempty"`    // 来源池 quote token account 所有者
+	DestQuoteTokenAccountOwner []byte                 `protobuf:"bytes,28,opt,name=dest_quote_token_account_owner,json=destQuoteTokenAccountOwner,proto3" json:"dest_quote_token_account_owner,omitempty"` // 目标池 quote token account 所有者
+	SrcPairTokenBalance        uint64                 `protobuf:"varint,29,opt,name=src_pair_token_balance,json=srcPairTokenBalance,proto3" json:"src_pair_token_balance,omitempty"`                       // 来源池 base token 余额
+	SrcPairQuoteBalance        uint64                 `protobuf:"varint,30,opt,name=src_pair_quote_balance,json=srcPairQuoteBalance,proto3" json:"src_pair_quote_balance,omitempty"`                       // 来源池 quote token 余额
+	DestPairTokenBalance       uint64                 `protobuf:"varint,31,opt,name=dest_pair_token_balance,json=destPairTokenBalance,proto3" json:"dest_pair_token_balance,omitempty"`                    // 目标池 base token 余额
+	DestPairQuoteBalance       uint64                 `protobuf:"varint,32,opt,name=dest_pair_quote_balance,json=destPairQuoteBalance,proto3" json:"dest_pair_quote_balance,omitempty"`                    // 目标池 quote token 余额
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
+}
+
+func (x *MigrateEvent) Reset() {
+	*x = MigrateEvent{}
+	mi := &file_event_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MigrateEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MigrateEvent) ProtoMessage() {}
+
+func (x *MigrateEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_event_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MigrateEvent.ProtoReflect.Descriptor instead.
+func (*MigrateEvent) Descriptor() ([]byte, []int) {
+	return file_event_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *MigrateEvent) GetType() EventType {
+	if x != nil {
+		return x.Type
+	}
+	return EventType_UNKNOWN
+}
+
+func (x *MigrateEvent) GetEventId() uint64 {
+	if x != nil {
+		return x.EventId
+	}
+	return 0
+}
+
+func (x *MigrateEvent) GetSlot() uint64 {
+	if x != nil {
+		return x.Slot
+	}
+	return 0
+}
+
+func (x *MigrateEvent) GetBlockTime() int64 {
+	if x != nil {
+		return x.BlockTime
+	}
+	return 0
+}
+
+func (x *MigrateEvent) GetTxHash() []byte {
+	if x != nil {
+		return x.TxHash
+	}
+	return nil
+}
+
+func (x *MigrateEvent) GetSigners() [][]byte {
+	if x != nil {
+		return x.Signers
+	}
+	return nil
+}
+
+func (x *MigrateEvent) GetUserWallet() []byte {
+	if x != nil {
+		return x.UserWallet
+	}
+	return nil
+}
+
+func (x *MigrateEvent) GetDestPoolCreator() []byte {
+	if x != nil {
+		return x.DestPoolCreator
+	}
+	return nil
+}
+
+func (x *MigrateEvent) GetSrcDex() uint32 {
+	if x != nil {
+		return x.SrcDex
+	}
+	return 0
+}
+
+func (x *MigrateEvent) GetDestDex() uint32 {
+	if x != nil {
+		return x.DestDex
+	}
+	return 0
+}
+
+func (x *MigrateEvent) GetTokenDecimals() uint32 {
+	if x != nil {
+		return x.TokenDecimals
+	}
+	return 0
+}
+
+func (x *MigrateEvent) GetQuoteDecimals() uint32 {
+	if x != nil {
+		return x.QuoteDecimals
+	}
+	return 0
+}
+
+func (x *MigrateEvent) GetTokenAmount() uint64 {
+	if x != nil {
+		return x.TokenAmount
+	}
+	return 0
+}
+
+func (x *MigrateEvent) GetQuoteTokenAmount() uint64 {
+	if x != nil {
+		return x.QuoteTokenAmount
+	}
+	return 0
+}
+
+func (x *MigrateEvent) GetMigrationFee() uint64 {
+	if x != nil {
+		return x.MigrationFee
+	}
+	return 0
+}
+
+func (x *MigrateEvent) GetToken() []byte {
+	if x != nil {
+		return x.Token
+	}
+	return nil
+}
+
+func (x *MigrateEvent) GetSrcQuoteToken() []byte {
+	if x != nil {
+		return x.SrcQuoteToken
+	}
+	return nil
+}
+
+func (x *MigrateEvent) GetDestQuoteToken() []byte {
+	if x != nil {
+		return x.DestQuoteToken
+	}
+	return nil
+}
+
+func (x *MigrateEvent) GetSrcPairAddress() []byte {
+	if x != nil {
+		return x.SrcPairAddress
+	}
+	return nil
+}
+
+func (x *MigrateEvent) GetDestPairAddress() []byte {
+	if x != nil {
+		return x.DestPairAddress
+	}
+	return nil
+}
+
+func (x *MigrateEvent) GetSrcTokenAccount() []byte {
+	if x != nil {
+		return x.SrcTokenAccount
+	}
+	return nil
+}
+
+func (x *MigrateEvent) GetDestTokenAccount() []byte {
+	if x != nil {
+		return x.DestTokenAccount
+	}
+	return nil
+}
+
+func (x *MigrateEvent) GetSrcQuoteTokenAccount() []byte {
+	if x != nil {
+		return x.SrcQuoteTokenAccount
+	}
+	return nil
+}
+
+func (x *MigrateEvent) GetDestQuoteTokenAccount() []byte {
+	if x != nil {
+		return x.DestQuoteTokenAccount
+	}
+	return nil
+}
+
+func (x *MigrateEvent) GetSrcTokenAccountOwner() []byte {
+	if x != nil {
+		return x.SrcTokenAccountOwner
+	}
+	return nil
+}
+
+func (x *MigrateEvent) GetDestTokenAccountOwner() []byte {
+	if x != nil {
+		return x.DestTokenAccountOwner
+	}
+	return nil
+}
+
+func (x *MigrateEvent) GetSrcQuoteTokenAccountOwner() []byte {
+	if x != nil {
+		return x.SrcQuoteTokenAccountOwner
+	}
+	return nil
+}
+
+func (x *MigrateEvent) GetDestQuoteTokenAccountOwner() []byte {
+	if x != nil {
+		return x.DestQuoteTokenAccountOwner
+	}
+	return nil
+}
+
+func (x *MigrateEvent) GetSrcPairTokenBalance() uint64 {
+	if x != nil {
+		return x.SrcPairTokenBalance
+	}
+	return 0
+}
+
+func (x *MigrateEvent) GetSrcPairQuoteBalance() uint64 {
+	if x != nil {
+		return x.SrcPairQuoteBalance
+	}
+	return 0
+}
+
+func (x *MigrateEvent) GetDestPairTokenBalance() uint64 {
+	if x != nil {
+		return x.DestPairTokenBalance
+	}
+	return 0
+}
+
+func (x *MigrateEvent) GetDestPairQuoteBalance() uint64 {
+	if x != nil {
+		return x.DestPairQuoteBalance
+	}
+	return 0
+}
+
 var File_event_proto protoreflect.FileDescriptor
 
 const file_event_proto_rawDesc = "" +
 	"\n" +
-	"\vevent.proto\x12\x02pb\"\x8c\x01\n" +
+	"\vevent.proto\x12\x02pb\"\xab\x01\n" +
 	"\x06Events\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\rR\aversion\x12\x19\n" +
 	"\bchain_id\x18\x02 \x01(\rR\achainId\x12\x12\n" +
 	"\x04slot\x18\x03 \x01(\x04R\x04slot\x12\x16\n" +
 	"\x06source\x18\x04 \x01(\x05R\x06source\x12!\n" +
-	"\x06events\x18\x05 \x03(\v2\t.pb.EventR\x06events\"\x9d\x02\n" +
+	"\x06events\x18\x05 \x03(\v2\t.pb.EventR\x06events\x12\x1d\n" +
+	"\n" +
+	"block_hash\x18\x06 \x01(\fR\tblockHash\"\xcb\x02\n" +
 	"\x05Event\x12&\n" +
 	"\x05trade\x18\x01 \x01(\v2\x0e.pb.TradeEventH\x00R\x05trade\x12/\n" +
 	"\btransfer\x18\x02 \x01(\v2\x11.pb.TransferEventH\x00R\btransfer\x122\n" +
 	"\tliquidity\x18\x03 \x01(\v2\x12.pb.LiquidityEventH\x00R\tliquidity\x12%\n" +
 	"\x04mint\x18\x04 \x01(\v2\x0f.pb.MintToEventH\x00R\x04mint\x12#\n" +
 	"\x04burn\x18\x05 \x01(\v2\r.pb.BurnEventH\x00R\x04burn\x122\n" +
-	"\abalance\x18\x06 \x01(\v2\x16.pb.BalanceUpdateEventH\x00R\abalanceB\a\n" +
+	"\abalance\x18\x06 \x01(\v2\x16.pb.BalanceUpdateEventH\x00R\abalance\x12,\n" +
+	"\amigrate\x18\a \x01(\v2\x10.pb.MigrateEventH\x00R\amigrateB\a\n" +
 	"\x05event\"\xa5\x06\n" +
 	"\n" +
 	"TradeEvent\x12!\n" +
@@ -1445,7 +1831,53 @@ const file_event_proto_rawDesc = "" +
 	"preBalance\x12!\n" +
 	"\fpost_balance\x18\t \x01(\x04R\vpostBalance\x12\x1a\n" +
 	"\bdecimals\x18\n" +
-	" \x01(\rR\bdecimals*\xbd\x01\n" +
+	" \x01(\rR\bdecimals\"\xcd\n" +
+	"\n" +
+	"\fMigrateEvent\x12!\n" +
+	"\x04type\x18\x01 \x01(\x0e2\r.pb.EventTypeR\x04type\x12\x19\n" +
+	"\bevent_id\x18\x02 \x01(\x04R\aeventId\x12\x12\n" +
+	"\x04slot\x18\x03 \x01(\x04R\x04slot\x12\x1d\n" +
+	"\n" +
+	"block_time\x18\x04 \x01(\x03R\tblockTime\x12\x17\n" +
+	"\atx_hash\x18\x05 \x01(\fR\x06txHash\x12\x18\n" +
+	"\asigners\x18\x06 \x03(\fR\asigners\x12\x1f\n" +
+	"\vuser_wallet\x18\a \x01(\fR\n" +
+	"userWallet\x12*\n" +
+	"\x11dest_pool_creator\x18\b \x01(\fR\x0fdestPoolCreator\x12\x17\n" +
+	"\asrc_dex\x18\t \x01(\rR\x06srcDex\x12\x19\n" +
+	"\bdest_dex\x18\n" +
+	" \x01(\rR\adestDex\x12%\n" +
+	"\x0etoken_decimals\x18\v \x01(\rR\rtokenDecimals\x12%\n" +
+	"\x0equote_decimals\x18\f \x01(\rR\rquoteDecimals\x12!\n" +
+	"\ftoken_amount\x18\r \x01(\x04R\vtokenAmount\x12,\n" +
+	"\x12quote_token_amount\x18\x0e \x01(\x04R\x10quoteTokenAmount\x12#\n" +
+	"\rmigration_fee\x18\x0f \x01(\x04R\fmigrationFee\x12\x14\n" +
+	"\x05token\x18\x10 \x01(\fR\x05token\x12&\n" +
+	"\x0fsrc_quote_token\x18\x11 \x01(\fR\rsrcQuoteToken\x12(\n" +
+	"\x10dest_quote_token\x18\x12 \x01(\fR\x0edestQuoteToken\x12(\n" +
+	"\x10src_pair_address\x18\x13 \x01(\fR\x0esrcPairAddress\x12*\n" +
+	"\x11dest_pair_address\x18\x14 \x01(\fR\x0fdestPairAddress\x12*\n" +
+	"\x11src_token_account\x18\x15 \x01(\fR\x0fsrcTokenAccount\x12,\n" +
+	"\x12dest_token_account\x18\x16 \x01(\fR\x10destTokenAccount\x125\n" +
+	"\x17src_quote_token_account\x18\x17 \x01(\fR\x14srcQuoteTokenAccount\x127\n" +
+	"\x18dest_quote_token_account\x18\x18 \x01(\fR\x15destQuoteTokenAccount\x125\n" +
+	"\x17src_token_account_owner\x18\x19 \x01(\fR\x14srcTokenAccountOwner\x127\n" +
+	"\x18dest_token_account_owner\x18\x1a \x01(\fR\x15destTokenAccountOwner\x12@\n" +
+	"\x1dsrc_quote_token_account_owner\x18\x1b \x01(\fR\x19srcQuoteTokenAccountOwner\x12B\n" +
+	"\x1edest_quote_token_account_owner\x18\x1c \x01(\fR\x1adestQuoteTokenAccountOwner\x123\n" +
+	"\x16src_pair_token_balance\x18\x1d \x01(\x04R\x13srcPairTokenBalance\x123\n" +
+	"\x16src_pair_quote_balance\x18\x1e \x01(\x04R\x13srcPairQuoteBalance\x125\n" +
+	"\x17dest_pair_token_balance\x18\x1f \x01(\x04R\x14destPairTokenBalance\x125\n" +
+	"\x17dest_pair_quote_balance\x18  \x01(\x04R\x14destPairQuoteBalance*\xae\x01\n" +
+	"\aDexType\x12\x0f\n" +
+	"\vDEX_UNKNOWN\x10\x00\x12\x12\n" +
+	"\x0eDEX_RAYDIUM_V4\x10\x01\x12\x14\n" +
+	"\x10DEX_RAYDIUM_CLMM\x10\x02\x12\x13\n" +
+	"\x0fDEX_PUMPFUN_AMM\x10\x03\x12\x0f\n" +
+	"\vDEX_PUMPFUN\x10\x04\x12\x14\n" +
+	"\x10DEX_RAYDIUM_CPMM\x10\x05\x12\x14\n" +
+	"\x10DEX_METEORA_DLMM\x10\x06\x12\x16\n" +
+	"\x12DEX_ORCA_WHIRLPOOL\x10\a*\xca\x01\n" +
 	"\tEventType\x12\v\n" +
 	"\aUNKNOWN\x10\x00\x12\r\n" +
 	"\tTRADE_BUY\x10\x01\x12\x0e\n" +
@@ -1457,7 +1889,9 @@ const file_event_proto_rawDesc = "" +
 	"\aMINT_TO\x10\x06\x12\b\n" +
 	"\x04BURN\x10\a\x12\x11\n" +
 	"\rTRADE_UNKNOWN\x10\b\x12\x0f\n" +
-	"\vCREATE_POOL\x10\t\x12\x12\n" +
+	"\vCREATE_POOL\x10\t\x12\v\n" +
+	"\aMIGRATE\x10\n" +
+	"\x12\x12\n" +
 	"\x0eBALANCE_UPDATE\x10<B\x17Z\x15dex-indexer-sol/pb;pbb\x06proto3"
 
 var (
@@ -1472,38 +1906,42 @@ func file_event_proto_rawDescGZIP() []byte {
 	return file_event_proto_rawDescData
 }
 
-var file_event_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_event_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_event_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_event_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_event_proto_goTypes = []any{
-	(EventType)(0),             // 0: pb.EventType
-	(*Events)(nil),             // 1: pb.Events
-	(*Event)(nil),              // 2: pb.Event
-	(*TradeEvent)(nil),         // 3: pb.TradeEvent
-	(*TransferEvent)(nil),      // 4: pb.TransferEvent
-	(*LiquidityEvent)(nil),     // 5: pb.LiquidityEvent
-	(*MintToEvent)(nil),        // 6: pb.MintToEvent
-	(*BurnEvent)(nil),          // 7: pb.BurnEvent
-	(*BalanceUpdateEvent)(nil), // 8: pb.BalanceUpdateEvent
+	(DexType)(0),               // 0: pb.DexType
+	(EventType)(0),             // 1: pb.EventType
+	(*Events)(nil),             // 2: pb.Events
+	(*Event)(nil),              // 3: pb.Event
+	(*TradeEvent)(nil),         // 4: pb.TradeEvent
+	(*TransferEvent)(nil),      // 5: pb.TransferEvent
+	(*LiquidityEvent)(nil),     // 6: pb.LiquidityEvent
+	(*MintToEvent)(nil),        // 7: pb.MintToEvent
+	(*BurnEvent)(nil),          // 8: pb.BurnEvent
+	(*BalanceUpdateEvent)(nil), // 9: pb.BalanceUpdateEvent
+	(*MigrateEvent)(nil),       // 10: pb.MigrateEvent
 }
 var file_event_proto_depIdxs = []int32{
-	2,  // 0: pb.Events.events:type_name -> pb.Event
-	3,  // 1: pb.Event.trade:type_name -> pb.TradeEvent
-	4,  // 2: pb.Event.transfer:type_name -> pb.TransferEvent
-	5,  // 3: pb.Event.liquidity:type_name -> pb.LiquidityEvent
-	6,  // 4: pb.Event.mint:type_name -> pb.MintToEvent
-	7,  // 5: pb.Event.burn:type_name -> pb.BurnEvent
-	8,  // 6: pb.Event.balance:type_name -> pb.BalanceUpdateEvent
-	0,  // 7: pb.TradeEvent.type:type_name -> pb.EventType
-	0,  // 8: pb.TransferEvent.type:type_name -> pb.EventType
-	0,  // 9: pb.LiquidityEvent.type:type_name -> pb.EventType
-	0,  // 10: pb.MintToEvent.type:type_name -> pb.EventType
-	0,  // 11: pb.BurnEvent.type:type_name -> pb.EventType
-	0,  // 12: pb.BalanceUpdateEvent.type:type_name -> pb.EventType
-	13, // [13:13] is the sub-list for method output_type
-	13, // [13:13] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	3,  // 0: pb.Events.events:type_name -> pb.Event
+	4,  // 1: pb.Event.trade:type_name -> pb.TradeEvent
+	5,  // 2: pb.Event.transfer:type_name -> pb.TransferEvent
+	6,  // 3: pb.Event.liquidity:type_name -> pb.LiquidityEvent
+	7,  // 4: pb.Event.mint:type_name -> pb.MintToEvent
+	8,  // 5: pb.Event.burn:type_name -> pb.BurnEvent
+	9,  // 6: pb.Event.balance:type_name -> pb.BalanceUpdateEvent
+	10, // 7: pb.Event.migrate:type_name -> pb.MigrateEvent
+	1,  // 8: pb.TradeEvent.type:type_name -> pb.EventType
+	1,  // 9: pb.TransferEvent.type:type_name -> pb.EventType
+	1,  // 10: pb.LiquidityEvent.type:type_name -> pb.EventType
+	1,  // 11: pb.MintToEvent.type:type_name -> pb.EventType
+	1,  // 12: pb.BurnEvent.type:type_name -> pb.EventType
+	1,  // 13: pb.BalanceUpdateEvent.type:type_name -> pb.EventType
+	1,  // 14: pb.MigrateEvent.type:type_name -> pb.EventType
+	15, // [15:15] is the sub-list for method output_type
+	15, // [15:15] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_event_proto_init() }
@@ -1518,14 +1956,15 @@ func file_event_proto_init() {
 		(*Event_Mint)(nil),
 		(*Event_Burn)(nil),
 		(*Event_Balance)(nil),
+		(*Event_Migrate)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_event_proto_rawDesc), len(file_event_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   8,
+			NumEnums:      2,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

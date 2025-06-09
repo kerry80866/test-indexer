@@ -15,15 +15,14 @@ func RegisterHandlers(m map[types.Pubkey]common.InstructionHandler) {
 }
 
 // handleTokenInstruction 根据 SPL Token 指令类型分派至对应解析函数。
-// 返回生成的事件（若有）和下一条待处理的指令索引。
 func handleTokenInstruction(
 	ctx *common.ParserContext,
 	instrs []*core.AdaptedInstruction,
 	current int,
-) (*core.Event, int) {
+) int {
 	ix := instrs[current]
 	if len(ix.Data) == 0 {
-		return nil, current + 1
+		return -1
 	}
 
 	switch ix.Data[0] {
@@ -41,6 +40,6 @@ func handleTokenInstruction(
 
 	default:
 		// 忽略非关心的 TokenProgram 指令
-		return nil, current + 1
+		return -1
 	}
 }

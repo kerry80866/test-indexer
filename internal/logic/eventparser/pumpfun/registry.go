@@ -9,8 +9,10 @@ import (
 )
 
 const (
-	Buy  uint64 = 0x66063d1201daebea
-	Sell uint64 = 0x33e685a4017f83ad
+	Create  uint64 = 0x181ec828051c0777
+	Buy     uint64 = 0x66063d1201daebea
+	Sell    uint64 = 0x33e685a4017f83ad
+	Migrate uint64 = 0x9beae792ec9ea21e
 )
 
 // RegisterHandlers 注册 RaydiumV4 相关 Program 的指令解析器（仅处理 CLMM Program）
@@ -22,23 +24,24 @@ func handleInstruction(
 	ctx *common.ParserContext,
 	instrs []*core.AdaptedInstruction,
 	current int,
-) (*core.Event, int) {
+) int {
 	ix := instrs[current]
 
 	// 指令 data 至少应包含 8 字节方法 ID
 	if len(ix.Data) < 8 {
-		return nil, current + 1
+		return -1
 	}
 
-	// 提取前 8 字节方法编号，进行分发
 	switch binary.BigEndian.Uint64(ix.Data[:8]) {
+	case Create:
+		return extractCreateEvent(ctx, instrs, current)
 	case Buy:
 		return extractSwapEvent(ctx, instrs, current, true)
 	case Sell:
 		return extractSwapEvent(ctx, instrs, current, false)
-
+	case Migrate:
+		return extractMigrateEvent(ctx, instrs, current)
 	default:
-		// 未识别的指令，直接跳过
-		return nil, current + 1
+		return -1
 	}
 }

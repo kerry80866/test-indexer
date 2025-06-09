@@ -1,4 +1,3 @@
-// liquidity_helper.go
 package common
 
 import (
@@ -22,31 +21,37 @@ type RemoveLiquidityResult struct {
 	MaxIndex       int // 涉及的最大指令序号
 }
 
-// LiquidityInstructionIndex 表示添加/移除流动性时涉及的账户索引。
-// 所有字段都是在指令中的 accounts 列表中的位置。
-type LiquidityInstructionIndex struct {
-	UserToken1AccountIndex int // 用户提供的 token1 账户索引
-	UserToken2AccountIndex int // 用户提供的 token2 账户索引
-	PoolToken1AccountIndex int // 池子的 token1 账户索引
-	PoolToken2AccountIndex int // 池子的 token2 账户索引
-	LpMintIndex            int // LP token 的 mint 账户索引（可选）
+type LiquidityLayout struct {
+	RequireBothTransfer bool
+	PoolAddressIndex    int // 必须存在, 不能为-1
+	TokenMint1Index     int // 可选, -1表示忽略
+	TokenMint2Index     int // 可选, -1表示忽略
+	UserWalletIndex     int // 可选, -1表示忽略
+
+	UserToken1AccountIndex int // 必须存在, 不能为-1
+	UserToken2AccountIndex int // 必须存在, 不能为-1
+	UserLpAccountIndex     int // 可选, -1表示忽略
+	PoolToken1AccountIndex int // 必须存在, 不能为-1
+	PoolToken2AccountIndex int // 必须存在, 不能为-1
+	LpMintIndex            int // 可选, -1表示忽略
 }
 
 // validateLiquidityInstructionIndex 校验 LiquidityInstructionIndex 中各字段合法性。
 // - 必选字段必须存在且 index 在 accounts 范围内。
 // - 可选字段（LpMintIndex）允许为 -1，表示未提供。
-func validateLiquidityInstructionIndex(indexes *LiquidityInstructionIndex, accountsLen int) bool {
+func validateLiquidityInstructionIndex(layout *LiquidityLayout, accountsLen int) bool {
 	isValid := func(index int) bool {
 		return index >= 0 && index < accountsLen
 	}
 	isOptional := func(index int) bool {
 		return index == -1 || isValid(index)
 	}
-	return isValid(indexes.UserToken1AccountIndex) &&
-		isValid(indexes.UserToken2AccountIndex) &&
-		isValid(indexes.PoolToken1AccountIndex) &&
-		isValid(indexes.PoolToken2AccountIndex) &&
-		isOptional(indexes.LpMintIndex)
+	return isValid(layout.UserToken1AccountIndex) &&
+		isValid(layout.UserToken2AccountIndex) &&
+		isValid(layout.PoolToken1AccountIndex) &&
+		isValid(layout.PoolToken2AccountIndex) &&
+		isOptional(layout.UserLpAccountIndex) &&
+		isOptional(layout.LpMintIndex)
 }
 
 // FindAddLiquidityTransfers 尝试从主指令开始向后匹配添加流动性相关的转账（Transfer）和铸造（MintTo）操作，
@@ -56,7 +61,7 @@ func validateLiquidityInstructionIndex(indexes *LiquidityInstructionIndex, accou
 //   - ctx          : 当前交易解析上下文（包含账户余额、Token 结构等信息）。
 //   - instrs       : 展平后的指令列表（包含主指令和 inner 指令）。
 //   - current      : 当前主指令在 instrs 中的索引（作为匹配起点）。
-//   - indexes      : 表示用户提供和池子使用的 Token 账户索引结构，包括 LP Mint（可选）。
+//   - layout       : 表示用户提供和池子使用的 Token 账户索引结构，包括 LP Mint（可选）。
 //   - maxLookahead : 向后最多检查的指令数量（不包括主指令本身）；
 //     若为 0，表示不限制，遍历当前主指令的所有 inner 指令（IxIndex 不变）。
 //
@@ -69,28 +74,34 @@ func FindAddLiquidityTransfers(
 	ctx *ParserContext,
 	instrs []*core.AdaptedInstruction,
 	current int,
-	indexes *LiquidityInstructionIndex,
+	layout *LiquidityLayout,
 	maxLookahead int,
 ) *AddLiquidityResult {
 	mainIx := instrs[current]
-	if !validateLiquidityInstructionIndex(indexes, len(mainIx.Accounts)) {
+	if !validateLiquidityInstructionIndex(layout, len(mainIx.Accounts)) {
 		return nil
 	}
 
 	// 提取关键账户
-	userToken1 := mainIx.Accounts[indexes.UserToken1AccountIndex]
-	userToken2 := mainIx.Accounts[indexes.UserToken2AccountIndex]
-	poolToken1 := mainIx.Accounts[indexes.PoolToken1AccountIndex]
-	poolToken2 := mainIx.Accounts[indexes.PoolToken2AccountIndex]
+	userToken1Account := mainIx.Accounts[layout.UserToken1AccountIndex]
+	userToken2Account := mainIx.Accounts[layout.UserToken2AccountIndex]
+	poolToken1Account := mainIx.Accounts[layout.PoolToken1AccountIndex]
+	poolToken2Account := mainIx.Accounts[layout.PoolToken2AccountIndex]
 
 	var token1Transfer, token2Transfer *ParsedTransfer
 	var lpMint *ParsedMintTo
 	maxIndex := current
 
-	hasLpMint := indexes.LpMintIndex >= 0
-	lpMintAccount := types.Pubkey{}
-	if hasLpMint {
-		lpMintAccount = mainIx.Accounts[indexes.LpMintIndex]
+	hasLp := layout.LpMintIndex >= 0
+	lpToken := types.Pubkey{}
+	if hasLp {
+		lpToken = mainIx.Accounts[layout.LpMintIndex]
+	}
+
+	hasUserLpAccount := layout.UserLpAccountIndex >= 0
+	userLpAccount := types.Pubkey{}
+	if hasUserLpAccount {
+		userLpAccount = mainIx.Accounts[layout.UserLpAccountIndex]
 	}
 
 	looked := 0
@@ -123,8 +134,8 @@ func FindAddLiquidityTransfers(
 
 			// 用户 → 池子：Token1
 			if token1Transfer == nil &&
-				pt.SrcAccount == userToken1 &&
-				(pt.DestAccount == poolToken1 || pt.DestAccount == poolToken2) {
+				pt.SrcAccount == userToken1Account &&
+				(pt.DestAccount == poolToken1Account || pt.DestAccount == poolToken2Account) {
 				// 若 token2 已匹配到相同目标，冲突跳过
 				if isTransferConflict(pt, token2Transfer) {
 					continue
@@ -136,8 +147,8 @@ func FindAddLiquidityTransfers(
 
 			// 用户 → 池子：Token2
 			if token2Transfer == nil &&
-				pt.SrcAccount == userToken2 &&
-				(pt.DestAccount == poolToken1 || pt.DestAccount == poolToken2) {
+				pt.SrcAccount == userToken2Account &&
+				(pt.DestAccount == poolToken1Account || pt.DestAccount == poolToken2Account) {
 				// 若 token1 已匹配到相同目标，冲突跳过
 				if isTransferConflict(pt, token1Transfer) {
 					continue
@@ -148,9 +159,9 @@ func FindAddLiquidityTransfers(
 			}
 
 		case byte(sdktoken.InstructionMintTo), byte(sdktoken.InstructionMintToChecked):
-			if hasLpMint && lpMint == nil {
+			if hasLp && lpMint == nil {
 				mt, ok := ParseMintToInstruction(ctx, ix)
-				if ok && mt.Token == lpMintAccount {
+				if ok && mt.Token == lpToken && (!hasUserLpAccount || mt.DestAccount == userLpAccount) {
 					lpMint = mt
 					maxIndex = i
 					continue
@@ -158,7 +169,7 @@ func FindAddLiquidityTransfers(
 			}
 		}
 
-		if token1Transfer != nil && token2Transfer != nil && (!hasLpMint || lpMint != nil) {
+		if token1Transfer != nil && token2Transfer != nil && (!hasLp || lpMint != nil) {
 			break
 		}
 	}
@@ -183,7 +194,7 @@ func FindAddLiquidityTransfers(
 //   - ctx          : 当前交易解析上下文（包含账户余额、Token 结构等信息）。
 //   - instrs       : 展平后的指令列表（包含主指令和 inner 指令）。
 //   - current      : 当前主指令在 instrs 中的索引（作为匹配起点）。
-//   - indexes      : 表示用户提供和池子使用的 Token 账户索引结构，包括 LP Mint（可选）。
+//   - layout       : 表示用户提供和池子使用的 Token 账户索引结构，包括 LP Mint（可选）。
 //   - maxLookahead : 向后最多检查的指令数量（不包括主指令本身）；
 //     若为 0，表示不限制，遍历当前主指令的所有 inner 指令（IxIndex 不变）。
 //
@@ -196,28 +207,34 @@ func FindRemoveLiquidityTransfers(
 	ctx *ParserContext,
 	instrs []*core.AdaptedInstruction,
 	current int,
-	indexes *LiquidityInstructionIndex,
+	layout *LiquidityLayout,
 	maxLookahead int,
 ) *RemoveLiquidityResult {
 	mainIx := instrs[current]
-	if !validateLiquidityInstructionIndex(indexes, len(mainIx.Accounts)) {
+	if !validateLiquidityInstructionIndex(layout, len(mainIx.Accounts)) {
 		return nil
 	}
 
 	// 提取关键账户
-	userToken1 := mainIx.Accounts[indexes.UserToken1AccountIndex]
-	userToken2 := mainIx.Accounts[indexes.UserToken2AccountIndex]
-	poolToken1 := mainIx.Accounts[indexes.PoolToken1AccountIndex]
-	poolToken2 := mainIx.Accounts[indexes.PoolToken2AccountIndex]
+	userToken1Account := mainIx.Accounts[layout.UserToken1AccountIndex]
+	userToken2Account := mainIx.Accounts[layout.UserToken2AccountIndex]
+	poolToken1Account := mainIx.Accounts[layout.PoolToken1AccountIndex]
+	poolToken2Account := mainIx.Accounts[layout.PoolToken2AccountIndex]
 
 	var token1Transfer, token2Transfer *ParsedTransfer
 	var lpBurn *ParsedBurn
 	maxIndex := current
 
-	hasLpMint := indexes.LpMintIndex >= 0
-	lpMintAccount := types.Pubkey{}
-	if hasLpMint {
-		lpMintAccount = mainIx.Accounts[indexes.LpMintIndex]
+	hasLp := layout.LpMintIndex >= 0
+	lpToken := types.Pubkey{}
+	if hasLp {
+		lpToken = mainIx.Accounts[layout.LpMintIndex]
+	}
+
+	hasUserLpAccount := layout.UserLpAccountIndex >= 0
+	userLpAccount := types.Pubkey{}
+	if hasUserLpAccount {
+		userLpAccount = mainIx.Accounts[layout.UserLpAccountIndex]
 	}
 
 	looked := 0
@@ -250,8 +267,8 @@ func FindRemoveLiquidityTransfers(
 
 			// 尝试匹配池子 → 用户 的 token1
 			if token1Transfer == nil &&
-				pt.DestAccount == userToken1 &&
-				(pt.SrcAccount == poolToken1 || pt.SrcAccount == poolToken2) {
+				pt.DestAccount == userToken1Account &&
+				(pt.SrcAccount == poolToken1Account || pt.SrcAccount == poolToken2Account) {
 				// 若 token2 已匹配到相同目标，冲突跳过
 				if isTransferConflict(pt, token2Transfer) {
 					continue
@@ -263,8 +280,8 @@ func FindRemoveLiquidityTransfers(
 
 			// 尝试匹配池子 → 用户 的 token2
 			if token2Transfer == nil &&
-				pt.DestAccount == userToken2 &&
-				(pt.SrcAccount == poolToken1 || pt.SrcAccount == poolToken2) {
+				pt.DestAccount == userToken2Account &&
+				(pt.SrcAccount == poolToken1Account || pt.SrcAccount == poolToken2Account) {
 				// 若 token1 已匹配到相同目标，冲突跳过
 				if isTransferConflict(pt, token1Transfer) {
 					continue
@@ -275,9 +292,9 @@ func FindRemoveLiquidityTransfers(
 			}
 
 		case byte(sdktoken.InstructionBurn), byte(sdktoken.InstructionBurnChecked):
-			if hasLpMint && lpBurn == nil {
+			if hasLp && lpBurn == nil {
 				burn, ok := ParseBurnInstruction(ctx, ix)
-				if ok && burn.Token == lpMintAccount {
+				if ok && burn.Token == lpToken && (!hasUserLpAccount || burn.SrcAccount == userLpAccount) {
 					lpBurn = burn
 					maxIndex = i
 					continue
@@ -285,7 +302,7 @@ func FindRemoveLiquidityTransfers(
 			}
 		}
 
-		if token1Transfer != nil && token2Transfer != nil && (!hasLpMint || lpBurn != nil) {
+		if token1Transfer != nil && token2Transfer != nil && (!hasLp || lpBurn != nil) {
 			break
 		}
 	}

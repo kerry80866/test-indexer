@@ -23,13 +23,13 @@ func extractSwapEvent(
 	ctx *common.ParserContext,
 	instrs []*core.AdaptedInstruction,
 	current int,
-) (*core.Event, int) {
+) int {
 	ix := instrs[current]
 
 	// 至少应有 7 个账户才能覆盖必要的 Swap 参数
 	if len(ix.Accounts) < 7 {
 		logger.Errorf("[RaydiumCLMM:extractSwapEvent] 账户数量不足: tx=%s", ctx.TxHashString())
-		return nil, current + 1
+		return -1
 	}
 
 	// 查找 Swap 过程中出现的两个方向的 Transfer（用户 -> 池子、池子 -> 用户）
@@ -38,10 +38,11 @@ func extractSwapEvent(
 		UserToken2AccountIndex: 4, // 用户接收 token 的账户
 		PoolToken1AccountIndex: 5, // 池子 token1 vault
 		PoolToken2AccountIndex: 6, // 池子 token2 vault
-	}, 4)
+	}, 6)
 	if result == nil {
-		logger.Errorf("[RaydiumCLMM:extractSwapEvent] 转账结构缺失: tx=%s", ctx.TxHashString())
-		return nil, current + 1
+		logger.Errorf("[RaydiumCLMM:extractSwapEvent] 转账结构缺失: tx=%s, ix=%d, inner=%d",
+			ctx.TxHashString(), ix.IxIndex, ix.InnerIndex)
+		return -1
 	}
 
 	// 推断 quote token
@@ -57,8 +58,9 @@ func extractSwapEvent(
 	// 构建标准交易事件（TradeEvent）
 	event := common.BuildTradeEvent(ctx, ix, result.UserToPool, result.PoolToUser, pairAddress, quote, isQuoteConfirmed, consts.DexRaydiumCLMM)
 	if event == nil {
-		return nil, current + 1
+		return -1
 	}
 
-	return event, result.MaxIndex + 1
+	ctx.AddEvent(event)
+	return result.MaxIndex + 1
 }

@@ -12,37 +12,43 @@ import (
 // SplToken: https://github.com/solana-program/token/blob/main/program/src/instruction.rs
 // Token2022: https://github.com/solana-program/token-2022
 
-// ParsedTransfer 表示一次 SPL Token 转账操作（Transfer 或 TransferChecked）
+// ParsedTransfer 表示一次 SPL Token 的 Transfer 或 TransferChecked 操作。
 type ParsedTransfer struct {
-	Token           types.Pubkey // Token 的 mint 地址
-	SrcAccount      types.Pubkey // 来源 SPL Token 账户地址
-	DestAccount     types.Pubkey // 目标 SPL Token 账户地址
-	SrcWallet       types.Pubkey // 来源钱包地址（TokenAccount 的 owner）
-	DestWallet      types.Pubkey // 目标钱包地址（TokenAccount 的 owner）
-	Amount          uint64       // 转账金额（最小单位）
+	IxIndex         uint16       // 主指令
+	InnerIndex      uint16       // 内部指令
+	Token           types.Pubkey // Token mint 地址
+	SrcAccount      types.Pubkey // 来源 TokenAccount
+	DestAccount     types.Pubkey // 目标 TokenAccount
+	SrcWallet       types.Pubkey // 来源账户所有者
+	DestWallet      types.Pubkey // 目标账户所有者
+	Amount          uint64       // 转账数量（最小单位）
 	Decimals        uint8        // Token 精度
-	SrcPostBalance  uint64       // 转出后余额
-	DestPostBalance uint64       // 转入后余额
+	SrcPostBalance  uint64       // 来源账户转账后余额
+	DestPostBalance uint64       // 目标账户转账后余额
 }
 
-// ParsedMintTo 表示一次 SPL Token 铸币操作（MintTo 或 MintToChecked）
+// ParsedMintTo 表示一次 SPL Token 的 MintTo 或 MintToChecked 操作。
 type ParsedMintTo struct {
-	Token           types.Pubkey // Token 的 mint 地址
-	DestAccount     types.Pubkey // 目标 SPL Token 账户地址
-	DestWallet      types.Pubkey // 目标钱包地址（TokenAccount 的 owner）
+	IxIndex         uint16       // 主指令
+	InnerIndex      uint16       // 内部指令
+	Token           types.Pubkey // Token mint 地址
+	DestAccount     types.Pubkey // 目标 TokenAccount
+	DestWallet      types.Pubkey // 目标账户所有者
 	Amount          uint64       // 铸币数量
 	Decimals        uint8        // Token 精度
-	DestPostBalance uint64       // 铸币后余额
+	DestPostBalance uint64       // 铸币后账户余额
 }
 
-// ParsedBurn 表示一次 SPL Token 销毁操作（Burn 或 BurnChecked）
+// ParsedBurn 表示一次 SPL Token 的 Burn 或 BurnChecked 操作。
 type ParsedBurn struct {
-	Token          types.Pubkey // 被销毁的 Token 的 mint 地址
-	SrcAccount     types.Pubkey // 来源 SPL Token 账户地址（被销毁 Token 所在账户）
-	SrcWallet      types.Pubkey // 来源钱包地址（TokenAccount 的 owner）
-	Amount         uint64       // 销毁数量（最小单位）
+	IxIndex        uint16       // 主指令
+	InnerIndex     uint16       // 内部指令
+	Token          types.Pubkey // Token mint 地址
+	SrcAccount     types.Pubkey // 来源 TokenAccount
+	SrcWallet      types.Pubkey // 来源账户所有者
+	Amount         uint64       // 销毁数量
 	Decimals       uint8        // Token 精度
-	SrcPostBalance uint64       // 销毁后余额（来源账户的 PostBalance）
+	SrcPostBalance uint64       // 销毁后账户余额
 }
 
 // ParseTransferInstruction 解析 Transfer / TransferChecked 指令
@@ -63,6 +69,8 @@ func ParseTransferInstruction(ctx *ParserContext, ix *core.AdaptedInstruction) (
 			return nil, false
 		}
 		return &ParsedTransfer{
+			IxIndex:         ix.IxIndex,
+			InnerIndex:      ix.InnerIndex,
 			Token:           srcInfo.Token,
 			SrcAccount:      ix.Accounts[0],
 			DestAccount:     ix.Accounts[1],
@@ -92,6 +100,8 @@ func ParseTransferInstruction(ctx *ParserContext, ix *core.AdaptedInstruction) (
 				ctx.TxHashString(), srcInfo.Token, ix.Accounts[1], ix.Accounts[0])
 		}
 		return &ParsedTransfer{
+			IxIndex:         ix.IxIndex,
+			InnerIndex:      ix.InnerIndex,
 			Token:           srcInfo.Token,
 			SrcAccount:      ix.Accounts[0],
 			DestAccount:     ix.Accounts[2],
@@ -128,6 +138,8 @@ func ParseMintToInstruction(ctx *ParserContext, ix *core.AdaptedInstruction) (*P
 			ctx.TxHashString(), info.Token, ix.Accounts[0], ix.Accounts[1])
 	}
 	return &ParsedMintTo{
+		IxIndex:         ix.IxIndex,
+		InnerIndex:      ix.InnerIndex,
 		Token:           ix.Accounts[0], // Accounts[0]更贴近指令定义，因此mintTo更倾向于Accounts[0],而不是info.Token
 		DestAccount:     ix.Accounts[1],
 		DestWallet:      ix.Accounts[2],
@@ -159,6 +171,8 @@ func ParseBurnInstruction(ctx *ParserContext, ix *core.AdaptedInstruction) (*Par
 			ctx.TxHashString(), info.Token, ix.Accounts[1], ix.Accounts[0])
 	}
 	return &ParsedBurn{
+		IxIndex:        ix.IxIndex,
+		InnerIndex:     ix.InnerIndex,
 		Token:          info.Token,
 		SrcAccount:     ix.Accounts[0],
 		SrcWallet:      ix.Accounts[2],

@@ -25,14 +25,16 @@ type GrpcStreamManager struct {
 	stream                pb.Geyser_SubscribeClient     // gRPC 订阅流
 	stopped               bool                          // 标记是否已经停止
 	reconnectAttempts     int                           // 已重连次数
-	reconnectInterval     time.Duration                 // 重连基础间隔
 	xToken                string                        // 认证用的 x-token
 	streamPingIntervalSec int                           // Stream心跳包发送间隔（秒）
 	blockChan             chan *pb.SubscribeUpdateBlock // 区块数据通道
 	connCtx               context.Context               // 当前连接的 context
 	connCancel            context.CancelFunc            // 当前连接的 cancel 函数
-	recvTimeoutSec        int                           // Recv 超时时间（秒）
-	sendTimeoutSec        int                           // gRPC发送超时时间（秒）
+	reconnectInterval     time.Duration                 // 每次重连之间的最小间隔（秒）
+	sendTimeoutSec        int                           // gRPC Send 超时时间（秒）
+	recvTimeoutSec        int                           // gRPC Recv 超时时间（秒）
+	maxLatencyWarnMs      int                           // 区块延迟超 3 秒打 warning
+	maxLatencyDropMs      int                           // 区块延迟超 5 秒断流重连
 }
 
 func NewGrpcStreamManager(sc *svc.GrpcServiceContext, blockChan chan *pb.SubscribeUpdateBlock) (*GrpcStreamManager, error) {
@@ -76,6 +78,8 @@ func NewGrpcStreamManager(sc *svc.GrpcServiceContext, blockChan chan *pb.Subscri
 		blockChan:             blockChan,
 		recvTimeoutSec:        grpcConf.RecvTimeoutSec,
 		sendTimeoutSec:        grpcConf.SendTimeoutSec,
+		maxLatencyWarnMs:      grpcConf.MaxLatencyWarnMs,
+		maxLatencyDropMs:      grpcConf.MaxLatencyDropMs,
 	}, nil
 }
 
@@ -87,14 +91,28 @@ func (m *GrpcStreamManager) Stop() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.stopped = true // 标记已停止
+	m.stopped = true // 标记已停止，必须在 cancel 之前设置，防止重入
+
+	// 先 cancel context，通知所有 goroutine 退出（如 pingLoop, blockRecvLoop）
 	if m.connCancel != nil {
-		m.connCancel() // 🔥 建议加上
+		m.connCancel()
 		m.connCancel = nil
 	}
+
+	// 再关闭 stream，确保没有 goroutine 在调用 Send()
+	if m.stream != nil {
+		if err := m.stream.CloseSend(); err != nil {
+			logger.Warnf("[GrpcStream] CloseSend failed: %v", err)
+		}
+		m.stream = nil
+	}
+
+	// 最后关闭连接
 	if m.conn != nil {
-		err := m.conn.Close()
-		_ = err
+		if err := m.conn.Close(); err != nil {
+			logger.Warnf("[GrpcStream] conn.Close failed: %v", err)
+		}
+		m.conn = nil
 	}
 }
 
@@ -154,6 +172,15 @@ func (m *GrpcStreamManager) connect() error {
 		m.connCancel()
 		m.connCancel = nil
 	}
+	// 再关闭 stream
+	if m.stream != nil {
+		if err := m.stream.CloseSend(); err != nil {
+			logger.Warnf("[GrpcStream] CloseSend failed: %v", err)
+		}
+		m.stream = nil
+	}
+
+	// 开始建立新的stream
 	m.connCtx, m.connCancel = context.WithCancel(context.Background())
 
 	logger.Infof("[GrpcStream] Attempting to connect...")
@@ -188,12 +215,17 @@ func (m *GrpcStreamManager) connect() error {
 }
 
 func (m *GrpcStreamManager) blockRecvLoop(ctx context.Context) {
-	last := time.Now()
-	recvTimeout := time.Duration(m.recvTimeoutSec) * time.Second
-
+	const warnSlotStep = 50
 	var lastSlot uint64 = 0
+	var lastWarnSlot uint64 = 0
 	var totalLatency int64 = 0
 	var count int64 = 0
+
+	last := time.Now()
+	warnThreshold := int64(m.maxLatencyWarnMs)
+	dropThreshold := int64(m.maxLatencyDropMs)
+	recvTimeout := time.Duration(m.recvTimeoutSec) * time.Second
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -215,11 +247,12 @@ func (m *GrpcStreamManager) blockRecvLoop(ctx context.Context) {
 				}
 				lastSlot = u.Block.Slot
 
-				interval := now.UnixMilli() - u.Block.BlockTime.Timestamp*1000 // 算出收到这个区块时的延迟（ms）
+				blockTime := u.Block.BlockTime.Timestamp * 1000
+				interval := now.UnixMilli() - blockTime // 算出收到这个区块时的延迟（ms）
 				totalLatency += interval
 				count++
 				avgLatency := totalLatency / count
-				logger.Infof("[GrpcStream] received block at slot %v, latency: %v ms, avg latency: %v ms (count=%d)", u.Block.Slot, interval, avgLatency, count)
+				logger.Infof("[GrpcStream] slot = %d, latency = %d ms, avg = %d ms (count = %d)", u.Block.Slot, interval, avgLatency, count)
 
 				select {
 				case m.blockChan <- u.Block:
@@ -227,10 +260,17 @@ func (m *GrpcStreamManager) blockRecvLoop(ctx context.Context) {
 				default:
 					//logger.Warnf("[GrpcStream] blockChan is full, discard block at slot %v", u.Block.Slot)
 				}
-				//interval1 := now.Sub(last)
-				//logger.Infof("[GrpcStream] received block at slot %v, interval since last block: %v ms", u.Block.Slot, interval1.Milliseconds())
+
 				//无论是否写入成功，都要更新 last
 				last = now
+				if interval > dropThreshold {
+					logger.Errorf("[GrpcStream] slot=%d, latency too high: %dms > %dms, reconnecting", u.Block.Slot, interval, dropThreshold)
+					m.reconnect()
+					return
+				} else if interval > warnThreshold && lastSlot-lastWarnSlot >= warnSlotStep {
+					logger.Warnf("[GrpcStream] slot=%d, high latency: %dms > %dms", u.Block.Slot, interval, warnThreshold)
+					lastWarnSlot = lastSlot
+				}
 			}
 
 			if time.Since(last) > recvTimeout {

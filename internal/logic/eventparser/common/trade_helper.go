@@ -58,10 +58,10 @@ func FindSwapTransfersByIndex(
 	}
 
 	// 提取关键账户
-	userToken1 := mainIx.Accounts[indexes.UserToken1AccountIndex]
-	userToken2 := mainIx.Accounts[indexes.UserToken2AccountIndex]
-	poolToken1 := mainIx.Accounts[indexes.PoolToken1AccountIndex]
-	poolToken2 := mainIx.Accounts[indexes.PoolToken2AccountIndex]
+	userToken1Account := mainIx.Accounts[indexes.UserToken1AccountIndex]
+	userToken2Account := mainIx.Accounts[indexes.UserToken2AccountIndex]
+	poolToken1Account := mainIx.Accounts[indexes.PoolToken1AccountIndex]
+	poolToken2Account := mainIx.Accounts[indexes.PoolToken2AccountIndex]
 
 	var userToPool, poolToUser *ParsedTransfer
 	maxIndex := current
@@ -99,33 +99,38 @@ func FindSwapTransfersByIndex(
 
 		// 用户 → 池子（支付方向）
 		if userToPool == nil &&
-			(pt.SrcAccount == userToken1 || pt.SrcAccount == userToken2) &&
-			(pt.DestAccount == poolToken1 || pt.DestAccount == poolToken2) {
+			(pt.SrcAccount == userToken1Account || pt.SrcAccount == userToken2Account) &&
+			(pt.DestAccount == poolToken1Account || pt.DestAccount == poolToken2Account) {
 			// 避免与 poolToUser 冲突（如地址重叠）
 			if isTransferConflict(pt, poolToUser) {
 				continue
 			}
 			userToPool = pt
 			maxIndex = i
+
+			// 两个方向都已匹配到，提前结束
+			if poolToUser != nil {
+				break
+			}
 			continue
 		}
 
 		// 池子 → 用户（接收方向）
 		if poolToUser == nil &&
-			(pt.SrcAccount == poolToken1 || pt.SrcAccount == poolToken2) &&
-			(pt.DestAccount == userToken1 || pt.DestAccount == userToken2) {
+			(pt.SrcAccount == poolToken1Account || pt.SrcAccount == poolToken2Account) &&
+			(pt.DestAccount == userToken1Account || pt.DestAccount == userToken2Account) {
 			// 避免与 userToPool 冲突（如地址重叠）
 			if isTransferConflict(pt, userToPool) {
 				continue
 			}
 			poolToUser = pt
 			maxIndex = i
-			continue
-		}
 
-		// 两个方向都已匹配到，提前结束
-		if userToPool != nil && poolToUser != nil {
-			break
+			// 两个方向都已匹配到，提前结束
+			if userToPool != nil {
+				break
+			}
+			continue
 		}
 	}
 

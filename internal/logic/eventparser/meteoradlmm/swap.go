@@ -30,13 +30,13 @@ func extractSwapEvent(
 	ctx *common.ParserContext,
 	instrs []*core.AdaptedInstruction,
 	current int,
-) (*core.Event, int) {
+) int {
 	ix := instrs[current]
 
 	// 校验账户数量是否满足预期
 	if len(ix.Accounts) < 8 {
-		logger.Errorf("[MeteoraDLMM:extractSwapEvent] 账户数量不足: tx=%s", ctx.TxHashString())
-		return nil, current + 1
+		logger.Errorf("[MeteoraDLMM:extractSwapEvent] 账户数量不足: tx=%s, accounts=%d", ctx.TxHashString(), len(ix.Accounts))
+		return -1
 	}
 
 	// 查找转账记录，匹配用户与池子 Token 账户
@@ -45,10 +45,11 @@ func extractSwapEvent(
 		UserToken2AccountIndex: 5,
 		PoolToken1AccountIndex: 2,
 		PoolToken2AccountIndex: 3,
-	}, 4)
+	}, 6)
 	if result == nil {
-		logger.Errorf("[MeteoraDLMM:extractSwapEvent] 转账结构缺失: tx=%s", ctx.TxHashString())
-		return nil, current + 1
+		logger.Errorf("[MeteoraDLMM:extractSwapEvent] 转账结构缺失: tx=%s, ix=%d, inner=%d",
+			ctx.TxHashString(), ix.IxIndex, ix.InnerIndex)
+		return -1
 	}
 
 	// 严格校验 mint 地址匹配（池子TokenX/TokenY mint 地址）
@@ -57,7 +58,7 @@ func extractSwapEvent(
 		logger.Errorf("[MeteoraDLMM:extractSwapEvent] mint 不匹配: tx=%s, userToPool=%s, poolToUser=%s, tokenX=%s, tokenY=%s",
 			ctx.TxHashString(), result.UserToPool.Token, result.PoolToUser.Token, ix.Accounts[6], ix.Accounts[7],
 		)
-		return nil, current + 1
+		return -1
 	}
 
 	// 优先尝试使用自定义优先级的quote token（WSOL、USDC、USDT等）
@@ -67,7 +68,7 @@ func extractSwapEvent(
 		quote = ix.Accounts[7]
 		if result.UserToPool.Token != quote && result.PoolToUser.Token != quote {
 			logger.Warnf("[MeteoraDLMM:extractSwapEvent] 无法识别 quote token，跳过: tx=%s", ctx.TxHashString())
-			return nil, current + 1
+			return -1
 		}
 	}
 
@@ -77,9 +78,9 @@ func extractSwapEvent(
 	// 构建交易事件
 	event := common.BuildTradeEvent(ctx, ix, result.UserToPool, result.PoolToUser, pairAddress, quote, true, consts.DexMeteoraDLMM)
 	if event == nil {
-		return nil, current + 1
+		return -1
 	}
 
-	// 返回事件以及处理的最大指令索引+1，供调用方跳过
-	return event, result.MaxIndex + 1
+	ctx.AddEvent(event)
+	return result.MaxIndex + 1
 }

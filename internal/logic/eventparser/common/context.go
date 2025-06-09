@@ -6,40 +6,51 @@ import (
 	"github.com/mr-tron/base58"
 )
 
-// ParserContext 是传入每个事件 handler 的解析上下文。
-// 它包含当前交易的完整结构、事件通用字段模板、日志信息、Token 精度等，
-// 用于支持事件识别、构造与序列化。
+// ParserContext 是事件解析时传入每个 handler 的上下文。
+// 包含当前交易的完整信息、日志、Token 精度、事件列表等。
 type ParserContext struct {
-	Tx        *core.AdaptedTx // 原始交易上下文，包含 slot、指令、账户等
-	TxIndex   uint32          // 当前交易在区块中的序号（基于 Geyser TransactionIndex）
+	Tx        *core.AdaptedTx // 当前交易（含 Slot、指令、账户等）
+	TxIndex   uint32          // 交易在区块中的序号
 	TxHash    []byte          // 交易签名（64 字节原始数据）
-	Signers   [][]byte        // 交易签名者
-	BlockTime int64           // 区块时间戳（Unix 秒级）
-	Slot      uint64          // 当前区块 Slot（Solana 高度单位）
+	Signers   [][]byte        // 签名者列表
+	BlockTime int64           // 区块时间（Unix 秒）
+	Slot      uint64          // 区块 Slot 高度
 
-	LogMessages []string                            // tx.Meta.LogMessages，用于部分协议日志判定
-	Balances    map[types.Pubkey]*core.TokenBalance // tokenAccount → TokenBalance
+	LogMessages []string                            // tx.Meta.LogMessages，用于日志判断
+	Balances    map[types.Pubkey]*core.TokenBalance // tokenAccount → TokenBalance 映射
+
+	Events []*core.Event // 当前交易解析出的事件
 }
 
+// TxHashString 返回交易签名的 Base58 编码形式。
 func (ctx *ParserContext) TxHashString() string {
 	return base58.Encode(ctx.TxHash)
 }
 
-// InstructionHandler 定义了统一的事件指令解析函数签名。
-// 用于从扁平化的 Solana 指令序列中解析事件。
-//
+// AddEvent 添加一个事件到当前上下文中。
+func (ctx *ParserContext) AddEvent(event *core.Event) {
+	ctx.Events = append(ctx.Events, event)
+}
+
+// TakeEvents 返回并清空当前上下文中的事件。
+func (ctx *ParserContext) TakeEvents() []*core.Event {
+	events := ctx.Events
+	ctx.Events = nil
+	return events
+}
+
+// InstructionHandler 定义事件指令的解析函数签名。
 // 参数：
-//   - ctx:     当前解析上下文（包含 txIndex、BaseEvent 等基础信息）
-//   - instrs:  当前交易中已展平的指令列表（含主指令与对应 inner 指令）
-//   - current: 当前正在处理的指令索引（instrs[current]）
+//   - ctx:     当前解析上下文
+//   - instrs:  当前交易中的扁平化指令列表（含 inner 指令）
+//   - current: 当前处理的指令索引（instrs[current]）
 //
 // 返回值：
-//   - event: 若成功解析出事件，返回成功解析的事件；否则为 nil
-//   - next:  返回下一条待处理的指令索引（通常为 current+1，可跳过多条）
-type InstructionHandler func(ctx *ParserContext, instrs []*core.AdaptedInstruction, current int) (event *core.Event, next int)
+//   - 若返回值 > current：表示成功处理，返回下一条待处理指令的索引（支持跳过多条指令）
+//   - 若返回值 <= current：表示未匹配或处理失败
+type InstructionHandler func(ctx *ParserContext, instrs []*core.AdaptedInstruction, current int) int
 
-// BuildParserContext 构造标准化的事件解析上下文。
-// 提前设置好 BaseEvent 模板和其他字段。
+// BuildParserContext 构造标准的事件解析上下文。
 func BuildParserContext(tx *core.AdaptedTx) *ParserContext {
 	return &ParserContext{
 		Tx:          tx,
@@ -50,5 +61,6 @@ func BuildParserContext(tx *core.AdaptedTx) *ParserContext {
 		Signers:     tx.Signers,
 		LogMessages: tx.LogMessages,
 		Balances:    tx.Balances,
+		Events:      make([]*core.Event, 0, len(tx.Instructions)),
 	}
 }

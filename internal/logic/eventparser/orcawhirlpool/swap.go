@@ -25,13 +25,13 @@ func extractSwapEvent(
 	ctx *common.ParserContext,
 	instrs []*core.AdaptedInstruction,
 	current int,
-) (*core.Event, int) {
+) int {
 	ix := instrs[current]
 
 	// 校验账户数量是否满足预期
 	if len(ix.Accounts) < 7 {
 		logger.Errorf("[OrcaWhirlpool:extractSwapEvent] 账户数量不足: tx=%s", ctx.TxHashString())
-		return nil, current + 1
+		return -1
 	}
 
 	// 查找转账记录，匹配用户与池子 Token 账户
@@ -40,10 +40,11 @@ func extractSwapEvent(
 		UserToken2AccountIndex: 5,
 		PoolToken1AccountIndex: 4,
 		PoolToken2AccountIndex: 6,
-	}, 4)
+	}, 6)
 	if result == nil {
-		logger.Errorf("[OrcaWhirlpool:extractSwapEvent] 转账结构缺失: tx=%s", ctx.TxHashString())
-		return nil, current + 1
+		logger.Errorf("[OrcaWhirlpool:extractSwapEvent] 转账结构缺失: tx=%s, ix=%d, inner=%d",
+			ctx.TxHashString(), ix.IxIndex, ix.InnerIndex)
+		return -1
 	}
 
 	// 优先尝试使用自定义优先级的quote token（WSOL、USDC、USDT等）
@@ -63,11 +64,11 @@ func extractSwapEvent(
 	// 构建交易事件
 	event := common.BuildTradeEvent(ctx, ix, result.UserToPool, result.PoolToUser, pairAddress, quote, true, consts.DexOrcaWhirlpool)
 	if event == nil {
-		return nil, current + 1
+		return -1
 	}
 
-	// 返回事件以及处理的最大指令索引+1，供调用方跳过
-	return event, result.MaxIndex + 1
+	ctx.AddEvent(event)
+	return result.MaxIndex + 1
 }
 
 // Orca Whirlpool Swap2 交易中账户结构:
@@ -90,13 +91,13 @@ func extractSwap2Event(
 	ctx *common.ParserContext,
 	instrs []*core.AdaptedInstruction,
 	current int,
-) (*core.Event, int) {
+) int {
 	ix := instrs[current]
 
 	// 校验账户数量是否满足预期
 	if len(ix.Accounts) < 11 {
 		logger.Errorf("[OrcaWhirlpool:extractSwap2Event] 账户数量不足: tx=%s", ctx.TxHashString())
-		return nil, current + 1
+		return -1
 	}
 
 	// 查找转账记录，匹配用户与池子 Token 账户
@@ -105,10 +106,11 @@ func extractSwap2Event(
 		UserToken2AccountIndex: 9,
 		PoolToken1AccountIndex: 8,
 		PoolToken2AccountIndex: 10,
-	}, 4)
+	}, 6)
 	if result == nil {
-		logger.Errorf("[OrcaWhirlpool:extractSwap2Event] 转账结构缺失: tx=%s", ctx.TxHashString())
-		return nil, current + 1
+		logger.Errorf("[OrcaWhirlpool:extractSwap2Event] 转账结构缺失: tx=%s, ix=%d, inner=%d",
+			ctx.TxHashString(), ix.IxIndex, ix.InnerIndex)
+		return -1
 	}
 
 	// 严格校验 mint 地址匹配
@@ -117,7 +119,7 @@ func extractSwap2Event(
 		logger.Errorf("[OrcaWhirlpool:extractSwap2Event] mint 不匹配: tx=%s, userToPool=%s, poolToUser=%s, tokenA=%s, tokenB=%s",
 			ctx.TxHashString(), result.UserToPool.Token, result.PoolToUser.Token, ix.Accounts[5], ix.Accounts[6],
 		)
-		return nil, current + 1
+		return -1
 	}
 
 	// 优先尝试使用自定义优先级的quote token（WSOL、USDC、USDT等）
@@ -126,7 +128,7 @@ func extractSwap2Event(
 		quote = ix.Accounts[6] // 默认取 Token Mint B 作为 quote token
 		if result.UserToPool.Token != quote && result.PoolToUser.Token != quote {
 			logger.Warnf("[OrcaWhirlpool:extractSwap2Event] 无法识别 quote token，跳过: tx=%s", ctx.TxHashString())
-			return nil, current + 1
+			return -1
 		}
 	}
 
@@ -136,9 +138,9 @@ func extractSwap2Event(
 	// 构建交易事件
 	event := common.BuildTradeEvent(ctx, ix, result.UserToPool, result.PoolToUser, pairAddress, quote, true, consts.DexOrcaWhirlpool)
 	if event == nil {
-		return nil, current + 1
+		return -1
 	}
 
-	// 返回事件以及处理的最大指令索引+1，供调用方跳过
-	return event, result.MaxIndex + 1
+	ctx.AddEvent(event)
+	return result.MaxIndex + 1
 }

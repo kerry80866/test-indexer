@@ -83,9 +83,11 @@ type GrpcConfig struct {
 		MaxCallRecvMsgSize int // 接收单条消息最大值（字节），如 128MB = 134217728
 
 		// 超时与重连策略
-		ReconnectIntervalSec int // 自动重连的最小间隔（秒）
-		RecvTimeoutSec       int // 接收超时时间（秒）
-		ConnectTimeoutSec    int // 首次连接超时（秒）
-		SendTimeoutSec       int // 消息发送超时时间（秒）
+		ReconnectIntervalSec int `json:",default=2"`    // 每次重连之间的最小间隔（秒）
+		ConnectTimeoutSec    int `json:",default=12"`   // gRPC 连接建立超时（秒）
+		SendTimeoutSec       int `json:",default=3"`    // gRPC Send 超时时间（秒）
+		RecvTimeoutSec       int `json:",default=5"`    // gRPC Recv 超时时间（秒）
+		MaxLatencyWarnMs     int `json:",default=3000"` // 区块延迟超 3 秒打 warning
+		MaxLatencyDropMs     int `json:",default=5000"` // 区块延迟超 5 秒断流重连
 	}
 }

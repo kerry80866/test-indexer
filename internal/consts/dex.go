@@ -9,3 +9,21 @@ const (
 	DexMeteoraDLMM              // 6
 	DexOrcaWhirlpool            // 7
 )
+
+var DexNames = []string{
+	"Unknown",       // 0 (保留)
+	"RaydiumV4",     // 1
+	"RaydiumCLMM",   // 2
+	"PumpfunAMM",    // 3
+	"Pumpfun",       // 4
+	"RaydiumCPMM",   // 5
+	"MeteoraDLMM",   // 6
+	"OrcaWhirlpool", // 7
+}
+
+func DexName(dex int) string {
+	if dex >= 1 && dex < len(DexNames) {
+		return DexNames[dex]
+	}
+	return DexNames[0] // Unknown
+}

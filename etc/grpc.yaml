@@ -8,7 +8,7 @@ LogConf:
 # GRPC特有配置
 Grpc:
   Endpoint:            # gRPC 服务端地址
-  XToken:                   # 认证用的 x-token
+  XToken:                    # 认证用的 x-token
   StreamPingIntervalSec: 20              # Stream心跳包发送间隔（秒）
   KeepalivePingIntervalSec: 12           # gRPC底层keepalive间隔（秒）
   KeepalivePingTimeoutSec: 4             # gRPC底层keepalive超时（秒）
@@ -16,16 +16,18 @@ Grpc:
   InitialConnWindowSize: 1073741824      # 整个连接窗口大小（字节）, 1GB
   MaxCallSendMsgSize: 33554432           # 单条消息最大发送字节数, 32MB
   MaxCallRecvMsgSize: 134217728          # 单条消息最大接收字节数, 128MB
-  ReconnectIntervalSec: 2                # 重连基础间隔（秒）
-  RecvTimeoutSec: 5                      # Recv 超时时间（秒）
-  ConnectTimeoutSec: 12                  # gRPC连接超时时间（秒）
-  SendTimeoutSec: 3                      # gRPC发送超时时间（秒）
+  ReconnectIntervalSec: 2                # 每次重连之间的最小间隔（秒）
+  ConnectTimeoutSec: 12                  # gRPC 连接建立超时（秒）
+  RecvTimeoutSec: 5                      # gRPC Send 超时时间（秒）
+  SendTimeoutSec: 3                      # gRPC Recv 操作超时（秒）
+  MaxLatencyWarnMs: 3000                 # 区块延迟超过 3 秒打 warning
+  MaxLatencyDropMs: 6000                 # 区块延迟超过 6 秒断流重连
 
 # 价格服务配置
 PriceServiceConf:
   Endpoint: "127.0.0.1:8080"
   SyncIntervalS: 60
-  WSolPrice: 153 #需要改这个配置
+  WSolPrice: 156 #需要改这个配置
 
 TimeConf:
   SlotDispatchTimeoutMs: 2000       # 控制整个 slot dispatch 生命周期：发事件 + Redis + DB（毫秒）

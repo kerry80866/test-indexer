@@ -26,10 +26,10 @@ func handleInstruction(
 	ctx *common.ParserContext,
 	instrs []*core.AdaptedInstruction,
 	current int,
-) (*core.Event, int) {
+) int {
 	ix := instrs[current]
 	if len(ix.Data) == 0 {
-		return nil, current + 1
+		return -1
 	}
 	switch ix.Data[0] {
 	case SwapBaseIn, SwapBaseOut:
@@ -39,9 +39,12 @@ func handleInstruction(
 		return extractAddLiquidityEvent(ctx, instrs, current)
 
 	case Withdraw:
-		return nil, current + 1
+		return extractRemoveLiquidityEvent(ctx, instrs, current)
+
+	case Initialize2:
+		return extractInitializeEvent(ctx, instrs, current)
 
 	default:
-		return nil, current + 1
+		return -1
 	}
 }
