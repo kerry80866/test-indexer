@@ -40,7 +40,7 @@ func extractSwapEvent(
 		UserToken2AccountIndex: 5,
 		PoolToken1AccountIndex: 4,
 		PoolToken2AccountIndex: 6,
-	}, 5)
+	}, 0)
 	if result == nil {
 		logger.Errorf("[OrcaWhirlpool:extractSwapEvent] 转账结构缺失: tx=%s, ix=%d, inner=%d",
 			ctx.TxHashString(), ix.IxIndex, ix.InnerIndex)
@@ -106,7 +106,7 @@ func extractSwap2Event(
 		UserToken2AccountIndex: 9,
 		PoolToken1AccountIndex: 8,
 		PoolToken2AccountIndex: 10,
-	}, 5)
+	}, 0)
 	if result == nil {
 		logger.Errorf("[OrcaWhirlpool:extractSwap2Event] 转账结构缺失: tx=%s, ix=%d, inner=%d",
 			ctx.TxHashString(), ix.IxIndex, ix.InnerIndex)
