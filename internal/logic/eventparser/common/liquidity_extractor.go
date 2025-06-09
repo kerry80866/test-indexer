@@ -154,21 +154,13 @@ func ExtractRemoveLiquidityEvent(
 		return nil, nil, -1
 	}
 
-	// Step 4: 校验两笔 token 的接收者钱包地址是否一致
-	if result.Token1Transfer.DestWallet != result.Token2Transfer.DestWallet {
-		logger.Warnf("[%s:%s] token 接收者钱包地址不一致: token1.wallet=%s token2.wallet=%s, ix=%d, inner=%d, tx=%s",
-			dexName, instructionName, result.Token1Transfer.DestWallet, result.Token2Transfer.DestWallet,
-			ix.IxIndex, ix.InnerIndex, ctx.TxHashString())
-		return nil, nil, -1
-	}
-
-	// Step 5: 校验 LP Burn 是否存在
+	// Step 4: 校验 LP Burn 是否存在
 	if layout.LpMintIndex >= 0 && result.LpBurn == nil {
 		logger.Warnf("[%s:%s] 缺少 LP Burn 转账: tx=%s", dexName, instructionName, ctx.TxHashString())
 		return nil, nil, -1
 	}
 
-	// Step 6: 校验 token mint
+	// Step 5: 校验 token mint
 	if layout.TokenMint1Index >= 0 {
 		expect := ix.Accounts[layout.TokenMint1Index]
 		if result.Token1Transfer.Token != expect {
@@ -186,8 +178,20 @@ func ExtractRemoveLiquidityEvent(
 		}
 	}
 
-	// Step 7: 判断 base / quote
+	// Step 6: 判断 base / quote
 	baseTransfer, quoteTransfer := determineBaseQuoteTransfer(result.Token1Transfer, result.Token2Transfer)
+
+	// Step 7: 校验两笔 token 的接收者钱包地址是否一致
+	if baseTransfer.DestWallet != quoteTransfer.DestWallet {
+		if isTempWSOLAccount(ctx.Balances, quoteTransfer.Token, quoteTransfer.DestAccount) {
+			// 是临时 WSOL 账户，放行
+		} else {
+			logger.Warnf("[%s:%s] token 接收者钱包地址不一致: token1.wallet=%s token2.wallet=%s, ix=%d, inner=%d, tx=%s",
+				dexName, instructionName, result.Token1Transfer.DestWallet, result.Token2Transfer.DestWallet,
+				ix.IxIndex, ix.InnerIndex, ctx.TxHashString())
+			return nil, nil, -1
+		}
+	}
 
 	// Step 8: 构建 RemoveLiquidityEvent
 	removeEvent := BuildRemoveLiquidityEvent(ctx, ix, baseTransfer, quoteTransfer, ix.Accounts[layout.PoolAddressIndex], dex)

@@ -2,6 +2,8 @@ package common
 
 import (
 	"bytes"
+	"dex-indexer-sol/internal/consts"
+	"dex-indexer-sol/internal/logic/core"
 	"dex-indexer-sol/internal/types"
 )
 
@@ -10,6 +12,21 @@ func isTransferConflict(pt, other *ParsedTransfer) bool {
 		return false
 	}
 	return pt.DestAccount == other.DestAccount || pt.SrcAccount == other.SrcAccount || pt.Token == other.Token
+}
+
+// isTempWSOLAccount 判断给定账户是否为“临时 WSOL 账户”
+func isTempWSOLAccount(
+	balances map[types.Pubkey]*core.TokenBalance,
+	token types.Pubkey,
+	account types.Pubkey,
+) bool {
+	if token != consts.WSOLMint {
+		return false
+	}
+	if info, ok := balances[account]; ok {
+		return info.PreBalance == 0 && info.PostBalance == 0
+	}
+	return false
 }
 
 // patchWSOLBalanceIfNeeded 检查是否为临时 WSOL 账户，若是则使用钱包 SOL 补充 quote 余额。
