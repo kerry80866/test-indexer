@@ -45,7 +45,7 @@ func extractSwapEvent(
 		UserToken2AccountIndex: 5,
 		PoolToken1AccountIndex: 2,
 		PoolToken2AccountIndex: 3,
-	}, 6)
+	}, 5)
 	if result == nil {
 		logger.Errorf("[MeteoraDLMM:extractSwapEvent] 转账结构缺失: tx=%s, ix=%d, inner=%d",
 			ctx.TxHashString(), ix.IxIndex, ix.InnerIndex)

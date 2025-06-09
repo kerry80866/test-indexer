@@ -21,7 +21,7 @@ type PumpMigrateEvent struct {
 	PoolMigrationFee uint64
 	BondingCurve     types.Pubkey
 	Timestamp        uint64
-	pool             types.Pubkey
+	Pool             types.Pubkey
 }
 
 // 示例交易：https://solscan.io/tx/467951uo4iDeWGtNxe8ZMGWiyeJTK1Dx2WGrK4gDNwcvgaUW9Lg4T84HRtT2d33ZRkZSZUUrihjc5ju7kZ7X7KeA

@@ -9,7 +9,7 @@ func isTransferConflict(pt, other *ParsedTransfer) bool {
 	if other == nil {
 		return false
 	}
-	return pt.DestAccount == other.DestAccount || pt.SrcAccount == other.SrcAccount
+	return pt.DestAccount == other.DestAccount || pt.SrcAccount == other.SrcAccount || pt.Token == other.Token
 }
 
 // patchWSOLBalanceIfNeeded 检查是否为临时 WSOL 账户，若是则使用钱包 SOL 补充 quote 余额。

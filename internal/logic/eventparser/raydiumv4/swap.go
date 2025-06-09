@@ -54,7 +54,7 @@ func extractSwapEvent(
 		UserToken2AccountIndex: accountOffset + 15,
 		PoolToken1AccountIndex: accountOffset + 4,
 		PoolToken2AccountIndex: accountOffset + 5,
-	}, 6)
+	}, 5)
 	if result == nil {
 		logger.Errorf("[RaydiumV4:extractSwapEvent] 转账结构缺失: tx=%s, ix=%d, inner=%d",
 			ctx.TxHashString(), ix.IxIndex, ix.InnerIndex)

@@ -38,7 +38,7 @@ func extractSwapEvent(
 		UserToken2AccountIndex: 4, // 用户接收 token 的账户
 		PoolToken1AccountIndex: 5, // 池子 token1 vault
 		PoolToken2AccountIndex: 6, // 池子 token2 vault
-	}, 6)
+	}, 5)
 	if result == nil {
 		logger.Errorf("[RaydiumCLMM:extractSwapEvent] 转账结构缺失: tx=%s, ix=%d, inner=%d",
 			ctx.TxHashString(), ix.IxIndex, ix.InnerIndex)
