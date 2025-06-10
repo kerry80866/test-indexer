@@ -115,8 +115,8 @@ func extractEventForIncreaseLiquidityV2(
 //
 // Raydium CLMM openPositionWithToken22Nft 指令账户布局：
 //
-// #0  - Payer                              // 交易费支付者（Signer + ，一般也是用户本人
-// #1  - Position NFT Owner                 // Position NFT 的初始持有者，等同于用户地址（Signer）
+// #0  - Payer                    			// 出钱的（负责转出 Token、支付交易费，一般是用户自己）
+// #1  - Position NFT Owner       			// 得利的（收到仓位 NFT、拥有流动性头寸）
 // #2  - Position NFT Mint                  // 新创建的 Position NFT 的 mint 账户
 // #3  - Position NFT Account               // 用户接收 Position NFT 的 TokenAccount
 // #4  - Pool State                         // 池子状态账户记录 tickSpacing、token 对、fee 等）
@@ -153,7 +153,7 @@ func extractEventForOpenPositionWithToken22Nft(
 		PoolAddressIndex:       4,
 		TokenMint1Index:        18,
 		TokenMint2Index:        19,
-		UserWalletIndex:        1,
+		UserWalletIndex:        0,
 		UserToken1AccountIndex: 9,
 		UserToken2AccountIndex: 10,
 		UserLpAccountIndex:     -1,
@@ -173,8 +173,8 @@ func extractEventForOpenPositionWithToken22Nft(
 
 // Raydium CLMM openPositionV2 指令账户布局：
 //
-// #0  - Payer                              // 交易费支付者，通常是用户本人
-// #1  - Position NFT Owner                 // Position NFT 的初始所有者
+// #0  - Payer                    			// 出钱的（负责转出 Token、支付交易费，一般是用户自己）
+// #1  - Position NFT Owner       			// 得利的（收到仓位 NFT、拥有流动性头寸）
 // #2  - Position NFT Mint                  // Position NFT 的 Mint 账户
 // #3  - Position NFT Account               // 用户接收 Position NFT 的 TokenAccount
 // #4  - Metadata Account                   // Position NFT 对应的 Metadata PDA（Writable，用于写入元数据）
@@ -213,7 +213,7 @@ func extractEventForOpenPositionV2(
 		PoolAddressIndex:       5,
 		TokenMint1Index:        20,
 		TokenMint2Index:        21,
-		UserWalletIndex:        1,
+		UserWalletIndex:        0,
 		UserToken1AccountIndex: 10,
 		UserToken2AccountIndex: 11,
 		UserLpAccountIndex:     -1,
