@@ -4,10 +4,10 @@ import (
 	"dex-indexer-sol/internal/cache"
 	"dex-indexer-sol/internal/config"
 	"dex-indexer-sol/internal/consts"
-	"dex-indexer-sol/internal/logger"
 	"dex-indexer-sol/internal/logic/eventparser"
 	"dex-indexer-sol/internal/logic/grpc"
 	"dex-indexer-sol/internal/svc"
+	"dex-indexer-sol/pkg/logger"
 	"flag"
 	"os"
 	"os/signal"
@@ -37,7 +37,7 @@ func main() {
 	conf.MustLoad(*configFile, &c)
 
 	// === 初始化 zap logger 并接管 logx 输出 ===
-	logger.InitLogger(c.LogConf)
+	logger.InitLogger(c.LogConf.ToLogOption())
 	logx.SetWriter(logger.ZapWriter{})
 
 	serviceContext, err := svc.NewGrpcServiceContext(c)

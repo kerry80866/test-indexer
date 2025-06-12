@@ -2,10 +2,10 @@ package common
 
 import (
 	"dex-indexer-sol/internal/consts"
-	"dex-indexer-sol/internal/logger"
 	"dex-indexer-sol/internal/logic/core"
-	"dex-indexer-sol/internal/types"
-	"dex-indexer-sol/internal/utils"
+	"dex-indexer-sol/internal/tools"
+	"dex-indexer-sol/pkg/logger"
+	"dex-indexer-sol/pkg/types"
 )
 
 func ExtractAddLiquidityEvent(
@@ -277,7 +277,7 @@ func getOtherPoolToken(
 func determineBaseQuoteTransfer(
 	transfer1, transfer2 *ParsedTransfer,
 ) (baseTransfer *ParsedTransfer, quoteTransfer *ParsedTransfer) {
-	if quote, ok := utils.ChooseQuote(transfer1.Token, transfer2.Token); ok {
+	if quote, ok := tools.ChooseQuote(transfer1.Token, transfer2.Token); ok {
 		if quote == transfer2.Token {
 			return transfer1, transfer2
 		}

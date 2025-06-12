@@ -1,7 +1,6 @@
 package eventparser
 
 import (
-	"dex-indexer-sol/internal/logger"
 	"dex-indexer-sol/internal/logic/core"
 	"dex-indexer-sol/internal/logic/eventparser/common"
 	"dex-indexer-sol/internal/logic/eventparser/meteoradlmm"
@@ -12,7 +11,8 @@ import (
 	"dex-indexer-sol/internal/logic/eventparser/raydiumcpmm"
 	"dex-indexer-sol/internal/logic/eventparser/raydiumv4"
 	"dex-indexer-sol/internal/logic/eventparser/spltoken"
-	"dex-indexer-sol/internal/types"
+	"dex-indexer-sol/pkg/logger"
+	"dex-indexer-sol/pkg/types"
 	"github.com/mr-tron/base58"
 	"runtime/debug"
 )

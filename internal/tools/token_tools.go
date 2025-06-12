@@ -1,8 +1,8 @@
-package utils
+package tools
 
 import (
 	"dex-indexer-sol/internal/consts"
-	"dex-indexer-sol/internal/types"
+	"dex-indexer-sol/pkg/types"
 )
 
 // IsSPLToken 判断一个 ProgramId 是否为标准的 SPL Token 程序。

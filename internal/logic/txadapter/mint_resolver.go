@@ -3,8 +3,8 @@ package txadapter
 import (
 	"dex-indexer-sol/internal/consts"
 	"dex-indexer-sol/internal/logic/core"
-	"dex-indexer-sol/internal/types"
-	"dex-indexer-sol/internal/utils"
+	"dex-indexer-sol/internal/tools"
+	"dex-indexer-sol/pkg/types"
 )
 
 // mintKV 表示缓存中的一个条目：mint base58 → Pubkey + decimals。
@@ -51,7 +51,7 @@ func (r *mintResolver) buildTokenDecimals() []core.TokenDecimals {
 
 	// 先添加 WSOL（通常最常用）
 	list = append(list, core.TokenDecimals{
-		Token: consts.WSOLMint, Decimals: utils.WSOLDecimals,
+		Token: consts.WSOLMint, Decimals: tools.WSOLDecimals,
 	})
 
 	// 添加动态 token
@@ -63,8 +63,8 @@ func (r *mintResolver) buildTokenDecimals() []core.TokenDecimals {
 
 	// 最后添加 USDC 和 USDT
 	list = append(list,
-		core.TokenDecimals{Token: consts.USDCMint, Decimals: utils.USDCDecimals},
-		core.TokenDecimals{Token: consts.USDTMint, Decimals: utils.USDTDecimals},
+		core.TokenDecimals{Token: consts.USDCMint, Decimals: tools.USDCDecimals},
+		core.TokenDecimals{Token: consts.USDTMint, Decimals: tools.USDTDecimals},
 	)
 	return list
 }

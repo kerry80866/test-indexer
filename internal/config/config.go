@@ -1,10 +1,24 @@
 package config
 
+import (
+	"dex-indexer-sol/pkg/logger"
+	"dex-indexer-sol/pkg/mq"
+)
+
 type LogConfig struct {
 	Format   string `json:",default=console"` // 日志格式，console/json
 	LogDir   string `json:",default=logs"`    // 日志目录
 	Level    string `json:",default=info"`    // 日志级别 debug/info/warn/error
 	Compress bool   `json:",default=false"`   // 是否压缩旧日志
+}
+
+func (c *LogConfig) ToLogOption() logger.LogOption {
+	return logger.LogOption{
+		Format:   c.Format,
+		LogDir:   c.LogDir,
+		Level:    c.Level,
+		Compress: c.Compress,
+	}
 }
 
 // PriceServiceConfig 表示价格服务配置
@@ -28,6 +42,21 @@ type KafkaProducerConfig struct {
 	Partitions struct {
 		Balance int // 余额变更 topic 的分区数（如 4）
 		Event   int // 综合事件 topic 的分区数（如 3）
+	}
+}
+
+func (c *KafkaProducerConfig) ToKafkaOption() mq.KafkaProducerOption {
+	return mq.KafkaProducerOption{
+		Brokers:   c.Brokers,
+		BatchSize: c.BatchSize,
+		LingerMs:  c.LingerMs,
+		Topics: []struct {
+			Topic      string
+			Partitions int
+		}{
+			{Topic: c.Topics.Balance, Partitions: c.Partitions.Balance},
+			{Topic: c.Topics.Event, Partitions: c.Partitions.Event},
+		},
 	}
 }
 

@@ -2,7 +2,7 @@ package txadapter
 
 import (
 	"dex-indexer-sol/internal/consts"
-	"dex-indexer-sol/internal/types"
+	"dex-indexer-sol/pkg/types"
 )
 
 type ownerResolver struct {

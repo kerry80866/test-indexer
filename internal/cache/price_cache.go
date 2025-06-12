@@ -3,7 +3,7 @@ package cache
 import (
 	"sync"
 
-	"dex-indexer-sol/internal/types"
+	"dex-indexer-sol/pkg/types"
 )
 
 type TokenPricePoint struct {

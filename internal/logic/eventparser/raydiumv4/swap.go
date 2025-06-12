@@ -2,10 +2,10 @@ package raydiumv4
 
 import (
 	"dex-indexer-sol/internal/consts"
-	"dex-indexer-sol/internal/logger"
 	"dex-indexer-sol/internal/logic/core"
 	"dex-indexer-sol/internal/logic/eventparser/common"
-	"dex-indexer-sol/internal/utils"
+	"dex-indexer-sol/internal/tools"
+	"dex-indexer-sol/pkg/logger"
 )
 
 // 来源：https://github.com/raydium-io/raydium-amm/blob/master/program/src/instruction.rs
@@ -62,7 +62,7 @@ func extractSwapEvent(
 	}
 
 	// 优先尝试使用自定义优先级的quote token（WSOL、USDC、USDT等）
-	quote, ok := utils.ChooseQuote(result.UserToPool.Token, result.PoolToUser.Token)
+	quote, ok := tools.ChooseQuote(result.UserToPool.Token, result.PoolToUser.Token)
 	if !ok {
 		// 使用池子默认quote token
 		if result.UserToPool.DestAccount == ix.Accounts[accountOffset+5] {

@@ -2,10 +2,10 @@ package raydiumcpmm
 
 import (
 	"dex-indexer-sol/internal/consts"
-	"dex-indexer-sol/internal/logger"
 	"dex-indexer-sol/internal/logic/core"
 	"dex-indexer-sol/internal/logic/eventparser/common"
-	"dex-indexer-sol/internal/utils"
+	"dex-indexer-sol/internal/tools"
+	"dex-indexer-sol/pkg/logger"
 )
 
 // Raydium CPMM Swap 账户结构（固定顺序）:
@@ -63,7 +63,7 @@ func extractSwapEvent(
 	}
 
 	// 优先尝试使用自定义优先级的quote token（WSOL、USDC、USDT等）
-	quote, ok := utils.ChooseQuote(result.UserToPool.Token, result.PoolToUser.Token)
+	quote, ok := tools.ChooseQuote(result.UserToPool.Token, result.PoolToUser.Token)
 	if !ok {
 		// fallback：根据方法区分 base 与 quote
 		if methodID == SwapBaseOut {

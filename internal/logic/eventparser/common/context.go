@@ -2,7 +2,7 @@ package common
 
 import (
 	"dex-indexer-sol/internal/logic/core"
-	"dex-indexer-sol/internal/types"
+	"dex-indexer-sol/pkg/types"
 	"github.com/mr-tron/base58"
 )
 

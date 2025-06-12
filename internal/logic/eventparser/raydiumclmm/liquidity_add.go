@@ -2,9 +2,9 @@ package raydiumclmm
 
 import (
 	"dex-indexer-sol/internal/consts"
-	"dex-indexer-sol/internal/logger"
 	"dex-indexer-sol/internal/logic/core"
 	"dex-indexer-sol/internal/logic/eventparser/common"
+	"dex-indexer-sol/pkg/logger"
 )
 
 // 示例交易：https://solscan.io/tx/29RtWoTifJDAEoV3gihDb1vyp1WnJnaiDK6aCCMf9BmZ1LmJQCmC6sMuFR6fuJiJJeGXPjchxxv5EkyhnrYseJoh

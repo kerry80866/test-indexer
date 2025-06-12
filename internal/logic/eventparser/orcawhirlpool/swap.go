@@ -2,10 +2,10 @@ package orcawhirlpool
 
 import (
 	"dex-indexer-sol/internal/consts"
-	"dex-indexer-sol/internal/logger"
 	"dex-indexer-sol/internal/logic/core"
 	"dex-indexer-sol/internal/logic/eventparser/common"
-	"dex-indexer-sol/internal/utils"
+	"dex-indexer-sol/internal/tools"
+	"dex-indexer-sol/pkg/logger"
 )
 
 // Orca Whirlpool Swap 交易中账户结构:
@@ -48,7 +48,7 @@ func extractSwapEvent(
 	}
 
 	// 优先尝试使用自定义优先级的quote token（WSOL、USDC、USDT等）
-	quote, ok := utils.ChooseQuote(result.UserToPool.Token, result.PoolToUser.Token)
+	quote, ok := tools.ChooseQuote(result.UserToPool.Token, result.PoolToUser.Token)
 	if !ok {
 		// 默认规则，token B 账户视为 quote token
 		if result.UserToPool.SrcAccount == ix.Accounts[5] {
@@ -123,7 +123,7 @@ func extractSwap2Event(
 	}
 
 	// 优先尝试使用自定义优先级的quote token（WSOL、USDC、USDT等）
-	quote, ok := utils.ChooseQuote(result.UserToPool.Token, result.PoolToUser.Token)
+	quote, ok := tools.ChooseQuote(result.UserToPool.Token, result.PoolToUser.Token)
 	if !ok {
 		quote = ix.Accounts[6] // 默认取 Token Mint B 作为 quote token
 		if result.UserToPool.Token != quote && result.PoolToUser.Token != quote {

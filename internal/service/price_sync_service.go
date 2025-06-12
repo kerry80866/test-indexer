@@ -3,10 +3,9 @@ package service
 import (
 	"context"
 	"dex-indexer-sol/internal/config"
-	"dex-indexer-sol/internal/logger"
-	"dex-indexer-sol/internal/types"
-	"dex-indexer-sol/internal/utils"
 	"dex-indexer-sol/pb"
+	"dex-indexer-sol/pkg/logger"
+	"dex-indexer-sol/pkg/types"
 	"fmt"
 	"time"
 
@@ -44,7 +43,7 @@ func NewPriceSyncService(config *config.PriceServiceConfig, priceCache *cache.Pr
 		priceCache: priceCache,
 		client:     client,
 		interval:   time.Duration(config.SyncIntervalS) * time.Second,
-		tokens:     utils.USDQuoteMintStrs,
+		tokens:     tools.USDQuoteMintStrs,
 		stopChan:   make(chan struct{}),
 		conn:       conn,
 	}

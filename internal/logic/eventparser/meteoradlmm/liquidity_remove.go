@@ -2,9 +2,9 @@ package meteoradlmm
 
 import (
 	"dex-indexer-sol/internal/consts"
-	"dex-indexer-sol/internal/logger"
 	"dex-indexer-sol/internal/logic/core"
 	"dex-indexer-sol/internal/logic/eventparser/common"
+	"dex-indexer-sol/pkg/logger"
 )
 
 // Method1

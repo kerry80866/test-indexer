@@ -2,9 +2,8 @@ package mq
 
 import (
 	"context"
-	"dex-indexer-sol/internal/config"
-	"dex-indexer-sol/internal/logger"
-	"dex-indexer-sol/internal/utils"
+	"dex-indexer-sol/pkg/logger"
+	"dex-indexer-sol/pkg/utils"
 	"fmt"
 	"time"
 
@@ -16,8 +15,19 @@ const (
 	defaultLingerMs  = 5
 )
 
+type KafkaProducerOption struct {
+	Brokers   string // Kafka broker 地址，多个用英文逗号分隔（如 "localhost:9092,localhost:9093"）
+	BatchSize int    // 批处理大小（单位字节），如 32768 = 32KB
+	LingerMs  int    // 批处理最大延迟（毫秒），建议 5~20ms 之间
+
+	Topics []struct {
+		Topic      string // topic名称
+		Partitions int    // 分区数
+	}
+}
+
 // NewKafkaProducer 创建 Kafka 生产者
-func NewKafkaProducer(cfg config.KafkaProducerConfig) (*kafka.Producer, error) {
+func NewKafkaProducer(cfg KafkaProducerOption) (*kafka.Producer, error) {
 	// 创建管理员客户端来管理 topic
 	adminClient, err := kafka.NewAdminClient(&kafka.ConfigMap{
 		"bootstrap.servers": cfg.Brokers,
@@ -51,20 +61,15 @@ func NewKafkaProducer(cfg config.KafkaProducerConfig) (*kafka.Producer, error) {
 		existingTopics[topic.Topic] = true
 	}
 
-	// 如果 topic 不存在，则添加到创建列表
-	if !existingTopics[cfg.Topics.Balance] {
-		topicsToCreate = append(topicsToCreate, kafka.TopicSpecification{
-			Topic:             cfg.Topics.Balance,
-			NumPartitions:     cfg.Partitions.Balance,
-			ReplicationFactor: replicationFactor,
-		})
-	}
-	if !existingTopics[cfg.Topics.Event] {
-		topicsToCreate = append(topicsToCreate, kafka.TopicSpecification{
-			Topic:             cfg.Topics.Event,
-			NumPartitions:     cfg.Partitions.Event,
-			ReplicationFactor: replicationFactor,
-		})
+	// 如果 topic 不存在，则添加 topic 到创建列表
+	for _, topic := range cfg.Topics {
+		if !existingTopics[topic.Topic] {
+			topicsToCreate = append(topicsToCreate, kafka.TopicSpecification{
+				Topic:             topic.Topic,
+				NumPartitions:     topic.Partitions,
+				ReplicationFactor: replicationFactor,
+			})
+		}
 	}
 
 	// 如果有需要创建的 topic，则创建

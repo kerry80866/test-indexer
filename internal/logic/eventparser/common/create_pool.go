@@ -2,11 +2,11 @@ package common
 
 import (
 	"dex-indexer-sol/internal/consts"
-	"dex-indexer-sol/internal/logger"
 	"dex-indexer-sol/internal/logic/core"
-	"dex-indexer-sol/internal/types"
-	"dex-indexer-sol/internal/utils"
+	"dex-indexer-sol/internal/tools"
 	"dex-indexer-sol/pb"
+	"dex-indexer-sol/pkg/logger"
+	"dex-indexer-sol/pkg/types"
 )
 
 type CreatePoolLayout struct {
@@ -47,12 +47,12 @@ func ExtractCreatePoolEvent(
 		return nil
 	}
 
-	if layout.TokenProgram1Index >= 0 && !utils.IsSPLTokenProgram(ix.Accounts[layout.TokenProgram1Index]) {
+	if layout.TokenProgram1Index >= 0 && !tools.IsSPLTokenProgram(ix.Accounts[layout.TokenProgram1Index]) {
 		logger.Errorf("[%s:%s] invalid TokenProgram1: %s, tx=%s",
 			dexName, instructionName, ix.Accounts[layout.TokenProgram1Index], ctx.TxHashString())
 		return nil
 	}
-	if layout.TokenProgram2Index >= 0 && !utils.IsSPLTokenProgram(ix.Accounts[layout.TokenProgram2Index]) {
+	if layout.TokenProgram2Index >= 0 && !tools.IsSPLTokenProgram(ix.Accounts[layout.TokenProgram2Index]) {
 		logger.Errorf("[%s:%s] invalid TokenProgram2: %s, tx=%s",
 			dexName, instructionName, ix.Accounts[layout.TokenProgram2Index], ctx.TxHashString())
 		return nil
@@ -74,7 +74,7 @@ func ExtractCreatePoolEvent(
 		UserQuoteBalance: 0,
 	}
 
-	quote, ok := utils.ChooseQuote(tokenMint1, tokenMint2)
+	quote, ok := tools.ChooseQuote(tokenMint1, tokenMint2)
 	if !ok {
 		quote = tokenMint2
 	}

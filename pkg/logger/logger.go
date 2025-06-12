@@ -1,7 +1,6 @@
 package logger
 
 import (
-	"dex-indexer-sol/internal/config"
 	"fmt"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -12,6 +11,13 @@ import (
 	"time"
 )
 
+type LogOption struct {
+	Format   string // 日志格式，console/json
+	LogDir   string // 日志目录
+	Level    string // 日志级别 debug/info/warn/error
+	Compress bool   // 是否压缩旧日志
+}
+
 var (
 	log      *zap.SugaredLogger
 	raw      *zap.Logger
@@ -19,7 +25,7 @@ var (
 )
 
 // InitLogger 初始化全局 zap 日志器
-func InitLogger(cfg config.LogConfig) {
+func InitLogger(cfg LogOption) {
 	initOnce.Do(func() {
 		if cfg.LogDir == "" {
 			cfg.LogDir = "logs"

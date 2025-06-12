@@ -1,9 +1,9 @@
 package common
 
 import (
-	"dex-indexer-sol/internal/logger"
 	"dex-indexer-sol/internal/logic/core"
-	"dex-indexer-sol/internal/types"
+	"dex-indexer-sol/pkg/logger"
+	"dex-indexer-sol/pkg/types"
 	"encoding/binary"
 	sdktoken "github.com/blocto/solana-go-sdk/program/token"
 )

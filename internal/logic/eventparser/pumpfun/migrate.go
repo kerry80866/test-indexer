@@ -2,12 +2,12 @@ package pumpfun
 
 import (
 	"dex-indexer-sol/internal/consts"
-	"dex-indexer-sol/internal/logger"
 	"dex-indexer-sol/internal/logic/core"
 	"dex-indexer-sol/internal/logic/eventparser/common"
-	"dex-indexer-sol/internal/types"
-	"dex-indexer-sol/internal/utils"
+	"dex-indexer-sol/internal/tools"
 	"dex-indexer-sol/pb"
+	"dex-indexer-sol/pkg/logger"
+	"dex-indexer-sol/pkg/types"
 	"github.com/near/borsh-go"
 	"runtime/debug"
 )
@@ -106,7 +106,7 @@ func extractMigrateEvent(
 	}
 
 	// 6. 校验 Token Program 是否为 SPL Token
-	if !utils.IsSPLTokenProgram(ix.Accounts[7]) {
+	if !tools.IsSPLTokenProgram(ix.Accounts[7]) {
 		logger.Errorf("[Pumpfun:Migrate] Token Program 非 SPL 标准程序: got=%s, tx=%s", ix.Accounts[7], ctx.TxHashString())
 		return -1
 	}

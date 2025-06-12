@@ -3,9 +3,9 @@ package svc
 import (
 	"dex-indexer-sol/internal/cache"
 	"dex-indexer-sol/internal/config"
-	"dex-indexer-sol/internal/logger"
 	"dex-indexer-sol/internal/logic/progress"
-	"dex-indexer-sol/internal/mq"
+	"dex-indexer-sol/pkg/logger"
+	"dex-indexer-sol/pkg/mq"
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 )
 
@@ -20,7 +20,7 @@ type GrpcServiceContext struct {
 // NewGrpcServiceContext 创建一个新的 GRPC 服务上下文
 func NewGrpcServiceContext(c config.GrpcConfig) (*GrpcServiceContext, error) {
 	// 1. 初始化 Kafka 生产者
-	producer, err := mq.NewKafkaProducer(c.KafkaProducerConf)
+	producer, err := mq.NewKafkaProducer(c.KafkaProducerConf.ToKafkaOption())
 	if err != nil {
 		logger.Errorf("Kafka producer 初始化失败: %v", err)
 		return nil, err

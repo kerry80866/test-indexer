@@ -2,10 +2,10 @@ package raydiumclmm
 
 import (
 	"dex-indexer-sol/internal/consts"
-	"dex-indexer-sol/internal/logger"
 	"dex-indexer-sol/internal/logic/core"
 	"dex-indexer-sol/internal/logic/eventparser/common"
-	"dex-indexer-sol/internal/utils"
+	"dex-indexer-sol/internal/tools"
+	"dex-indexer-sol/pkg/logger"
 )
 
 // extractSwapEvent 解析 Raydium CLMM (Concentrated Liquidity Market Maker) 的 swap 事件，构造标准 TradeEvent（BUY / SELL）。
@@ -46,7 +46,7 @@ func extractSwapEvent(
 	}
 
 	// 推断 quote token
-	quote, isQuoteConfirmed := utils.ChooseQuote(result.UserToPool.Token, result.PoolToUser.Token)
+	quote, isQuoteConfirmed := tools.ChooseQuote(result.UserToPool.Token, result.PoolToUser.Token)
 	if !isQuoteConfirmed {
 		// 选择一个token作为quote token, 此时isQuoteConfirmed为false
 		quote = result.UserToPool.Token

@@ -2,9 +2,9 @@ package orcawhirlpool
 
 import (
 	"dex-indexer-sol/internal/consts"
-	"dex-indexer-sol/internal/logger"
 	"dex-indexer-sol/internal/logic/core"
 	"dex-indexer-sol/internal/logic/eventparser/common"
+	"dex-indexer-sol/pkg/logger"
 )
 
 // 示例交易：https://solscan.io/tx/Miz5QpAfzCXHAuaZB9erP2xjy66PgGzJokyaS8yBzkgozzPGafivYLbNhBx1f4cMu14cfifEEPfeDNDKqVjfMYi

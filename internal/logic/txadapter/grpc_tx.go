@@ -2,8 +2,9 @@ package txadapter
 
 import (
 	"dex-indexer-sol/internal/logic/core"
-	"dex-indexer-sol/internal/types"
-	"dex-indexer-sol/internal/utils"
+	"dex-indexer-sol/internal/tools"
+	"dex-indexer-sol/pkg/types"
+	"dex-indexer-sol/pkg/utils"
 	"fmt"
 	pb "github.com/rpcpool/yellowstone-grpc/examples/golang/proto"
 )
@@ -116,7 +117,7 @@ func buildBalances(
 	// 先处理 Post（代表账户最终状态），初始化结构，PreBalance 默认为 0
 	for i, post := range postList {
 		// 仅处理标准 SPL Token（TokenProgram / Token2022），跳过非标准模拟账户
-		if utils.IsSPLToken(post.ProgramId) {
+		if tools.IsSPLToken(post.ProgramId) {
 			account := accountKeys[post.AccountIndex]
 			decimals := uint8(post.UiTokenAmount.Decimals)
 			balanceMap[account] = &core.TokenBalance{
@@ -135,7 +136,7 @@ func buildBalances(
 	newIndex := len(preList)
 	for _, pre := range preList {
 		// 仅处理标准 SPL Token（TokenProgram / Token2022），跳过非标准模拟账户
-		if utils.IsSPLToken(pre.ProgramId) {
+		if tools.IsSPLToken(pre.ProgramId) {
 			account := accountKeys[pre.AccountIndex]
 			owner := ownerResolver.resolve(pre.Owner)
 			if tb, ok := balanceMap[account]; ok {

@@ -2,10 +2,10 @@ package pumpfunamm
 
 import (
 	"dex-indexer-sol/internal/consts"
-	"dex-indexer-sol/internal/logger"
 	"dex-indexer-sol/internal/logic/core"
 	"dex-indexer-sol/internal/logic/eventparser/common"
 	"dex-indexer-sol/pb"
+	"dex-indexer-sol/pkg/logger"
 )
 
 // Pump.fun AMM 添加流动性指令账户布局：

@@ -3,10 +3,10 @@ package dispatcher
 import (
 	"dex-indexer-sol/internal/consts"
 	"dex-indexer-sol/internal/logic/core"
-	"dex-indexer-sol/internal/mq"
-	"dex-indexer-sol/internal/types"
-	"dex-indexer-sol/internal/utils"
 	"dex-indexer-sol/pb"
+	"dex-indexer-sol/pkg/mq"
+	"dex-indexer-sol/pkg/types"
+	"dex-indexer-sol/pkg/utils"
 	"sort"
 	"sync"
 )

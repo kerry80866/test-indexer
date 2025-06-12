@@ -2,10 +2,10 @@ package meteoradlmm
 
 import (
 	"dex-indexer-sol/internal/consts"
-	"dex-indexer-sol/internal/logger"
 	"dex-indexer-sol/internal/logic/core"
 	"dex-indexer-sol/internal/logic/eventparser/common"
-	"dex-indexer-sol/internal/utils"
+	"dex-indexer-sol/internal/tools"
+	"dex-indexer-sol/pkg/logger"
 )
 
 // extractSwapEvent 解析 Meteora DLMM Swap 交易事件。
@@ -62,7 +62,7 @@ func extractSwapEvent(
 	}
 
 	// 优先尝试使用自定义优先级的quote token（WSOL、USDC、USDT等）
-	quote, ok := utils.ChooseQuote(result.UserToPool.Token, result.PoolToUser.Token)
+	quote, ok := tools.ChooseQuote(result.UserToPool.Token, result.PoolToUser.Token)
 	if !ok {
 		// fallback 使用池子默认的 Quote Token (Token Y Mint)
 		quote = ix.Accounts[7]

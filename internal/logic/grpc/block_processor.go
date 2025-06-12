@@ -8,15 +8,16 @@ import (
 	"dex-indexer-sol/internal/logic/eventparser"
 	"dex-indexer-sol/internal/logic/progress"
 	"dex-indexer-sol/internal/logic/txadapter"
-	"dex-indexer-sol/internal/mq"
 	"dex-indexer-sol/internal/svc"
-	"dex-indexer-sol/internal/types"
-	"dex-indexer-sol/internal/utils"
+	"dex-indexer-sol/internal/tools"
+	"dex-indexer-sol/pkg/mq"
+	"dex-indexer-sol/pkg/types"
+	"dex-indexer-sol/pkg/utils"
 	"errors"
 	"sync/atomic"
 	"time"
 
-	"dex-indexer-sol/internal/logger"
+	"dex-indexer-sol/pkg/logger"
 
 	pb "github.com/rpcpool/yellowstone-grpc/examples/golang/proto"
 )
@@ -164,7 +165,7 @@ func (p *BlockProcessor) buildTxContext(block *pb.SubscribeUpdateBlock) *core.Tx
 
 	// 从价格缓存中获取 quote token 价格，如果失败则跳过该 block
 	blockTime := block.BlockTime.Timestamp
-	prices, ok := p.sc.PriceCache.GetQuotePricesAt(utils.USDQuoteMints, blockTime)
+	prices, ok := p.sc.PriceCache.GetQuotePricesAt(tools.USDQuoteMints, blockTime)
 	if !ok {
 		logger.Errorf("[BlockProcessor] 获取 QuoteToken 价格失败，跳过该区块：slot=%d, blockTime=%d",
 			block.Slot, blockTime)
@@ -173,7 +174,7 @@ func (p *BlockProcessor) buildTxContext(block *pb.SubscribeUpdateBlock) *core.Tx
 
 	// 构建 quotesPrice 数组
 	quotesPrice := make([]core.QuotePrice, 0, len(prices))
-	for i, mint := range utils.USDQuoteMints {
+	for i, mint := range tools.USDQuoteMints {
 		quotesPrice = append(quotesPrice, core.QuotePrice{
 			Token:    mint,
 			PriceUsd: prices[i],
