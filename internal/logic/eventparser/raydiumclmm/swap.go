@@ -1,11 +1,11 @@
 package raydiumclmm
 
 import (
-	"dex-indexer-sol/internal/consts"
-	"dex-indexer-sol/internal/logic/core"
-	"dex-indexer-sol/internal/logic/eventparser/common"
-	"dex-indexer-sol/internal/tools"
-	"dex-indexer-sol/pkg/logger"
+	"github.com/dex-indexer-sol/internal/consts"
+	"github.com/dex-indexer-sol/internal/logic/core"
+	"github.com/dex-indexer-sol/internal/logic/eventparser/common"
+	"github.com/dex-indexer-sol/internal/tools"
+	"github.com/dex-indexer-sol/pkg/logger"
 )
 
 // extractSwapEvent 解析 Raydium CLMM (Concentrated Liquidity Market Maker) 的 swap 事件，构造标准 TradeEvent（BUY / SELL）。

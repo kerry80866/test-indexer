@@ -1,12 +1,12 @@
 package svc
 
 import (
-	"dex-indexer-sol/internal/cache"
-	"dex-indexer-sol/internal/config"
-	"dex-indexer-sol/internal/logic/progress"
-	"dex-indexer-sol/pkg/logger"
-	"dex-indexer-sol/pkg/mq"
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
+	"github.com/dex-indexer-sol/internal/cache"
+	"github.com/dex-indexer-sol/internal/config"
+	"github.com/dex-indexer-sol/internal/logic/progress"
+	"github.com/dex-indexer-sol/pkg/logger"
+	"github.com/dex-indexer-sol/pkg/mq"
 )
 
 // GrpcServiceContext 包含GRPC服务资源

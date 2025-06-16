@@ -2,9 +2,9 @@ package common
 
 import (
 	"bytes"
-	"dex-indexer-sol/internal/consts"
-	"dex-indexer-sol/internal/logic/core"
-	"dex-indexer-sol/pkg/types"
+	"github.com/dex-indexer-sol/internal/consts"
+	"github.com/dex-indexer-sol/internal/logic/core"
+	"github.com/dex-indexer-sol/pkg/types"
 )
 
 func isTransferConflict(pt, other *ParsedTransfer) bool {

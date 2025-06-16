@@ -1,15 +1,15 @@
 package main
 
 import (
-	"dex-indexer-sol/internal/cache"
-	"dex-indexer-sol/internal/config"
-	"dex-indexer-sol/internal/consts"
-	"dex-indexer-sol/internal/logic/eventparser"
-	"dex-indexer-sol/internal/logic/grpc"
-	"dex-indexer-sol/internal/svc"
-	"dex-indexer-sol/pkg/configloader"
-	"dex-indexer-sol/pkg/logger"
 	"flag"
+	"github.com/dex-indexer-sol/internal/cache"
+	"github.com/dex-indexer-sol/internal/config"
+	"github.com/dex-indexer-sol/internal/consts"
+	"github.com/dex-indexer-sol/internal/logic/eventparser"
+	"github.com/dex-indexer-sol/internal/logic/grpc"
+	"github.com/dex-indexer-sol/internal/svc"
+	"github.com/dex-indexer-sol/pkg/configloader"
+	"github.com/dex-indexer-sol/pkg/logger"
 	"log"
 	"os"
 	"os/signal"

@@ -1,8 +1,8 @@
 package common
 
 import (
-	"dex-indexer-sol/pb"
 	"fmt"
+	"github.com/dex-indexer-sol/pb"
 	"github.com/mr-tron/base58"
 )
 

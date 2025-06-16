@@ -1,8 +1,8 @@
 package spltoken
 
 import (
-	"dex-indexer-sol/internal/logic/core"
-	"dex-indexer-sol/internal/logic/eventparser/common"
+	"github.com/dex-indexer-sol/internal/logic/core"
+	"github.com/dex-indexer-sol/internal/logic/eventparser/common"
 )
 
 // extractTokenMintToEvent 尝试将当前指令解析为 SPL Token 的 MintTo 或 MintToChecked 操作。

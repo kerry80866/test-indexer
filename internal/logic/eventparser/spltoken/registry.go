@@ -1,11 +1,11 @@
 package spltoken
 
 import (
-	"dex-indexer-sol/internal/consts"
-	"dex-indexer-sol/internal/logic/core"
-	"dex-indexer-sol/internal/logic/eventparser/common"
-	"dex-indexer-sol/pkg/types"
 	sdktoken "github.com/blocto/solana-go-sdk/program/token"
+	"github.com/dex-indexer-sol/internal/consts"
+	"github.com/dex-indexer-sol/internal/logic/core"
+	"github.com/dex-indexer-sol/internal/logic/eventparser/common"
+	"github.com/dex-indexer-sol/pkg/types"
 )
 
 // RegisterHandlers 注册 token 的所有指令处理逻辑

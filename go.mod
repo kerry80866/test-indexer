@@ -1,4 +1,4 @@
-module dex-indexer-sol
+module github.com/dex-indexer-sol
 
 go 1.24.3
 

@@ -1,12 +1,12 @@
 package meteoradlmm
 
 import (
-	"dex-indexer-sol/internal/consts"
-	"dex-indexer-sol/internal/logic/core"
-	"dex-indexer-sol/internal/logic/eventparser/common"
-	"dex-indexer-sol/internal/tools"
-	"dex-indexer-sol/pkg/logger"
-	"dex-indexer-sol/pkg/types"
+	"github.com/dex-indexer-sol/internal/consts"
+	"github.com/dex-indexer-sol/internal/logic/core"
+	"github.com/dex-indexer-sol/internal/logic/eventparser/common"
+	"github.com/dex-indexer-sol/internal/tools"
+	"github.com/dex-indexer-sol/pkg/logger"
+	"github.com/dex-indexer-sol/pkg/types"
 )
 
 // Method1

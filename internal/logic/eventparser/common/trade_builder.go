@@ -1,12 +1,12 @@
 package common
 
 import (
-	"dex-indexer-sol/internal/consts"
-	"dex-indexer-sol/internal/logic/core"
-	"dex-indexer-sol/pb"
-	"dex-indexer-sol/pkg/logger"
-	"dex-indexer-sol/pkg/types"
-	"dex-indexer-sol/pkg/utils"
+	"github.com/dex-indexer-sol/internal/consts"
+	"github.com/dex-indexer-sol/internal/logic/core"
+	"github.com/dex-indexer-sol/pb"
+	"github.com/dex-indexer-sol/pkg/logger"
+	"github.com/dex-indexer-sol/pkg/types"
+	"github.com/dex-indexer-sol/pkg/utils"
 )
 
 // BuildTradeEvent 根据 token 转账方向构建 BUY 或 SELL 类型的交易事件。

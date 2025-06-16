@@ -1,10 +1,10 @@
 package meteoradlmm
 
 import (
-	"dex-indexer-sol/internal/consts"
-	"dex-indexer-sol/internal/logic/core"
-	"dex-indexer-sol/internal/logic/eventparser/common"
-	"dex-indexer-sol/pkg/logger"
+	"github.com/dex-indexer-sol/internal/consts"
+	"github.com/dex-indexer-sol/internal/logic/core"
+	"github.com/dex-indexer-sol/internal/logic/eventparser/common"
+	"github.com/dex-indexer-sol/pkg/logger"
 )
 
 // 示例交易：https://solscan.io/tx/o7D5om3waD7MXBH3mkGRjUxW1UyuwPu3gmLHW2hYjL9j6vqwecqGowrgsJvFJ445bjZZuXhWk2KhrRAmSDr42ev

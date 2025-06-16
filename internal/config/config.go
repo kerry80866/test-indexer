@@ -1,8 +1,8 @@
 package config
 
 import (
-	"dex-indexer-sol/pkg/logger"
-	"dex-indexer-sol/pkg/mq"
+	"github.com/dex-indexer-sol/pkg/logger"
+	"github.com/dex-indexer-sol/pkg/mq"
 )
 
 type LogConfig struct {

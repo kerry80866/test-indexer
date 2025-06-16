@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package pb;
 
-option go_package = "dex-indexer-sol/pb;pb"; // 模块名 + pb 输出目录
+option go_package = "github.com/dex-indexer-sol/pb;pb"; // 模块名 + pb 输出目录
 
 enum DexType {
   DEX_UNKNOWN = 0;            // 未知 DEX 类型

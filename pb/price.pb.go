@@ -245,7 +245,7 @@ const file_price_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12.\n" +
 	"\x05value\x18\x02 \x01(\v2\x18.price.TokenPriceHistoryR\x05value:\x028\x012`\n" +
 	"\fPriceService\x12P\n" +
-	"\x0fGetPriceHistory\x12\x1d.price.GetPriceHistoryRequest\x1a\x1e.price.GetPriceHistoryResponseB\x17Z\x15dex-indexer-sol/pb;pbb\x06proto3"
+	"\x0fGetPriceHistory\x12\x1d.price.GetPriceHistoryRequest\x1a\x1e.price.GetPriceHistoryResponseB\"Z github.com/dex-indexer-sol/pb;pbb\x06proto3"
 
 var (
 	file_price_proto_rawDescOnce sync.Once

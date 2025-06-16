@@ -1,8 +1,8 @@
 package tools
 
 import (
-	"dex-indexer-sol/internal/consts"
-	"dex-indexer-sol/pkg/types"
+	"github.com/dex-indexer-sol/internal/consts"
+	"github.com/dex-indexer-sol/pkg/types"
 )
 
 const (

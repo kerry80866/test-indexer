@@ -2,15 +2,15 @@ package service
 
 import (
 	"context"
-	"dex-indexer-sol/internal/config"
-	"dex-indexer-sol/pb"
-	"dex-indexer-sol/pkg/logger"
-	"dex-indexer-sol/pkg/types"
 	"fmt"
+	"github.com/dex-indexer-sol/internal/config"
+	"github.com/dex-indexer-sol/pb"
+	"github.com/dex-indexer-sol/pkg/logger"
+	"github.com/dex-indexer-sol/pkg/types"
 	"time"
 
-	"dex-indexer-sol/internal/cache"
-	"dex-indexer-sol/internal/consts"
+	"github.com/dex-indexer-sol/internal/cache"
+	"github.com/dex-indexer-sol/internal/consts"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"

@@ -1,8 +1,8 @@
 package core
 
 import (
-	"dex-indexer-sol/pb"
-	"dex-indexer-sol/pkg/types"
+	"github.com/dex-indexer-sol/pb"
+	"github.com/dex-indexer-sol/pkg/types"
 )
 
 // ParsedTxResult 表示某笔交易解析后的中间结构，包含余额和事件
