@@ -1,7 +1,6 @@
 package dispatcher
 
 import (
-	"dex-indexer-sol/internal/consts"
 	"dex-indexer-sol/internal/logic/core"
 	"dex-indexer-sol/pb"
 	"dex-indexer-sol/pkg/mq"
@@ -14,8 +13,7 @@ import (
 // BuildBalanceKafkaJobs 构造 TokenBalance 类型的 KafkaJob。
 // 每个 KafkaJob 对应一个分区，内部包含多个 BalanceUpdateEvent。
 func BuildBalanceKafkaJobs(
-	slot uint64,
-	blockTime int64,
+	txCtx *core.TxContext,
 	source int32,
 	topic string,
 	partitions int,
@@ -38,40 +36,18 @@ func BuildBalanceKafkaJobs(
 		buckets[i] = make([]*core.TokenBalance, 0, capacity)
 	}
 
-	// 分发 balance 至对应分区
+	// 直接按 TokenAccount 分区，跳过清除逻辑
 	for _, res := range results {
 		for _, bal := range res.Balances {
-			if bal.HasPreOwner && bal.PreOwner != bal.PostOwner {
-				// 插入一条“老 owner”的清除记录（用于老 owner 的落库清理）
-				old := &core.TokenBalance{
-					Decimals:     bal.Decimals,
-					HasPreOwner:  false,
-					TxIndex:      bal.TxIndex,
-					InnerIndex:   bal.InnerIndex,
-					TokenAccount: bal.TokenAccount,
-					PreBalance:   bal.PreBalance,
-					PostBalance:  0,
-					Token:        bal.Token,
-					PostOwner:    bal.PreOwner,
-				}
-				i := utils.PartitionHashBytes(old.PostOwner[:], uint32(partitions))
-				buckets[i] = append(buckets[i], old)
-
-				// 原 balance 的 PreBalance 已交由 old 记录，设为 0
-				bal.PreBalance = 0
-			} else if bal.PreBalance == 0 && bal.PostBalance == 0 {
-				continue // 忽略无效/临时账户
+			if bal.PreBalance == 0 && bal.PostBalance == 0 {
+				continue // 临时账户
 			}
-
-			// 高位标记为系统生成事件（非原始交易指令）
-			bal.InnerIndex |= 0x8000
-
-			pid := utils.PartitionHashBytes(bal.PostOwner[:], uint32(partitions))
+			pid := utils.PartitionHashBytes(bal.TokenAccount[:], uint32(partitions))
 			buckets[pid] = append(buckets[pid], bal)
 		}
 	}
 
-	// 并发构建 KafkaJob（每个分区一个 Job）
+	// 并发构建 KafkaJob
 	jobs := make([]*mq.KafkaJob, partitions)
 	var wg sync.WaitGroup
 	for i := 0; i < partitions; i++ {
@@ -79,7 +55,7 @@ func BuildBalanceKafkaJobs(
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			jobs[j] = buildBalancePartitionJob(slot, blockTime, source, topic, j, buckets[j])
+			jobs[j] = buildBalancePartitionJob(txCtx, source, topic, j, buckets[j])
 		}()
 	}
 	wg.Wait()
@@ -100,8 +76,7 @@ func BuildBalanceKafkaJobs(
 
 // buildBalancePartitionJob 构建指定分区内的 KafkaJob。
 func buildBalancePartitionJob(
-	slot uint64,
-	blockTime int64,
+	txCtx *core.TxContext,
 	source int32,
 	topic string,
 	partition int,
@@ -111,13 +86,25 @@ func buildBalancePartitionJob(
 		return nil
 	}
 
-	// 按 TokenAccount + PostOwner 合并余额记录
-	merged := mergeBalanceByTokenAndOwner(balances)
-	if len(merged) == 0 {
-		return nil
+	// 合并同一个 TokenAccount 的记录，保留 TxIndex 最大的一条（即最新的一条）
+	merged := make(map[types.Pubkey]*core.TokenBalance, len(balances))
+	for _, bal := range balances {
+		exist := merged[bal.TokenAccount]
+		if exist == nil {
+			merged[bal.TokenAccount] = bal
+		} else if exist.TxIndex < bal.TxIndex {
+			exist.TxIndex = bal.TxIndex
+			exist.InnerIndex = bal.InnerIndex
+			exist.Token = bal.Token
+			exist.PostOwner = bal.PostOwner
+			exist.PostBalance = bal.PostBalance
+			exist.Decimals = bal.Decimals
+		}
 	}
 
 	// 构造 Protobuf Events 列表
+	slot := txCtx.Slot
+	blockTime := txCtx.BlockTime
 	events := make([]*pb.Event, 0, len(merged))
 	for _, bal := range merged {
 		id := slot<<32 | uint64(bal.TxIndex)<<16 | uint64(bal.InnerIndex)
@@ -139,55 +126,14 @@ func buildBalancePartitionJob(
 		})
 	}
 
+	sort.Slice(events, func(i, j int) bool {
+		return events[i].GetBalance().EventId < events[j].GetBalance().EventId
+	})
+
 	// 封装为 KafkaJob
 	return &mq.KafkaJob{
 		Topic:     topic,
 		Partition: int32(partition),
-		Msg: &pb.Events{
-			Version: 1,
-			ChainId: consts.ChainIDSolana,
-			Slot:    slot,
-			Source:  source,
-			Events:  events,
-		},
+		Msg:       buildEventsProto(txCtx, events, source),
 	}
-}
-
-// mergeBalanceByTokenAndOwner 合并同一 TokenAccount + PostOwner 的余额记录。
-func mergeBalanceByTokenAndOwner(balances []*core.TokenBalance) []*core.TokenBalance {
-	merged := make(map[types.Pubkey][]*core.TokenBalance, len(balances))
-
-	for _, bal := range balances {
-		list := merged[bal.TokenAccount]
-
-		found := false
-		for i := range list {
-			if list[i].PostOwner == bal.PostOwner {
-				// 更新变化字段（覆盖）
-				list[i].TxIndex = bal.TxIndex
-				list[i].InnerIndex = bal.InnerIndex
-				list[i].PostBalance = bal.PostBalance
-				found = true
-				break
-			}
-		}
-		if !found {
-			merged[bal.TokenAccount] = append(list, bal)
-		}
-	}
-
-	// 扁平化输出
-	result := make([]*core.TokenBalance, 0, len(balances))
-	for _, list := range merged {
-		result = append(result, list...)
-	}
-
-	// 保证事件顺序一致性：先按 TxIndex，再按 InnerIndex 排序
-	sort.Slice(result, func(i, j int) bool {
-		if result[i].TxIndex == result[j].TxIndex {
-			return result[i].InnerIndex < result[j].InnerIndex
-		}
-		return result[i].TxIndex < result[j].TxIndex
-	})
-	return result
 }

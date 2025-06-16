@@ -101,6 +101,7 @@ const (
 	EventType_TRADE_UNKNOWN    EventType = 8
 	EventType_CREATE_POOL      EventType = 9
 	EventType_MIGRATE          EventType = 10
+	EventType_LAUNCHPAD_TOKEN  EventType = 11
 	// --- 系统/同步类事件（编号从 60 开始） ---
 	EventType_BALANCE_UPDATE EventType = 60
 )
@@ -119,6 +120,7 @@ var (
 		8:  "TRADE_UNKNOWN",
 		9:  "CREATE_POOL",
 		10: "MIGRATE",
+		11: "LAUNCHPAD_TOKEN",
 		60: "BALANCE_UPDATE",
 	}
 	EventType_value = map[string]int32{
@@ -133,6 +135,7 @@ var (
 		"TRADE_UNKNOWN":    8,
 		"CREATE_POOL":      9,
 		"MIGRATE":          10,
+		"LAUNCHPAD_TOKEN":  11,
 		"BALANCE_UPDATE":   60,
 	}
 )
@@ -167,12 +170,13 @@ func (EventType) EnumDescriptor() ([]byte, []int) {
 // slot级别的事件数组（封装一个 slot 的全部事件）
 type Events struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Version       uint32                 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`                     // 批量消息结构版本号（用于升级兼容）
-	ChainId       uint32                 `protobuf:"varint,2,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty"`      // 链 ID，例如 100000 = Solana
-	Slot          uint64                 `protobuf:"varint,3,opt,name=slot,proto3" json:"slot,omitempty"`                           // 所属 slot
-	Source        int32                  `protobuf:"varint,4,opt,name=source,proto3" json:"source,omitempty"`                       // 数据来源：1=GRPC补块，2=RPC推送
-	Events        []*Event               `protobuf:"bytes,5,rep,name=events,proto3" json:"events,omitempty"`                        // 事件数组
-	BlockHash     []byte                 `protobuf:"bytes,6,opt,name=block_hash,json=blockHash,proto3" json:"block_hash,omitempty"` // 区块哈希（blockhash）
+	Version       uint32                 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`                           // 批量消息结构版本号（用于升级兼容）
+	ChainId       uint32                 `protobuf:"varint,2,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty"`            // 链 ID，例如 100000 = Solana
+	Slot          uint64                 `protobuf:"varint,3,opt,name=slot,proto3" json:"slot,omitempty"`                                 // 所属 slot
+	Source        int32                  `protobuf:"varint,4,opt,name=source,proto3" json:"source,omitempty"`                             // 数据来源：1=GRPC补块，2=RPC推送
+	Events        []*Event               `protobuf:"bytes,5,rep,name=events,proto3" json:"events,omitempty"`                              // 事件数组
+	BlockHash     []byte                 `protobuf:"bytes,6,opt,name=block_hash,json=blockHash,proto3" json:"block_hash,omitempty"`       // 区块哈希（blockhash）
+	QuotePrices   []*TokenPrice          `protobuf:"bytes,7,rep,name=quote_prices,json=quotePrices,proto3" json:"quote_prices,omitempty"` // 右对报价币价格（例如 USDC/USDT/WSOL）
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -249,6 +253,74 @@ func (x *Events) GetBlockHash() []byte {
 	return nil
 }
 
+func (x *Events) GetQuotePrices() []*TokenPrice {
+	if x != nil {
+		return x.QuotePrices
+	}
+	return nil
+}
+
+// 单个报价币的价格信息
+type TokenPrice struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Token         []byte                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`        // 报价币的 mint 地址
+	Price         float64                `protobuf:"fixed64,2,opt,name=price,proto3" json:"price,omitempty"`      // 报价币对应的 USD 价格（每 1 个 token 的美元价值，不是最小单位，例如 150.0 表示 1 个 token = $150）
+	Decimals      uint32                 `protobuf:"varint,3,opt,name=decimals,proto3" json:"decimals,omitempty"` // token 精度（如 USDC 是 6，WSOL 是 9）
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TokenPrice) Reset() {
+	*x = TokenPrice{}
+	mi := &file_event_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TokenPrice) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TokenPrice) ProtoMessage() {}
+
+func (x *TokenPrice) ProtoReflect() protoreflect.Message {
+	mi := &file_event_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TokenPrice.ProtoReflect.Descriptor instead.
+func (*TokenPrice) Descriptor() ([]byte, []int) {
+	return file_event_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *TokenPrice) GetToken() []byte {
+	if x != nil {
+		return x.Token
+	}
+	return nil
+}
+
+func (x *TokenPrice) GetPrice() float64 {
+	if x != nil {
+		return x.Price
+	}
+	return 0
+}
+
+func (x *TokenPrice) GetDecimals() uint32 {
+	if x != nil {
+		return x.Decimals
+	}
+	return 0
+}
+
 // 通用事件包装结构（每条只封装一个子类型）
 type Event struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -261,6 +333,7 @@ type Event struct {
 	//	*Event_Burn
 	//	*Event_Balance
 	//	*Event_Migrate
+	//	*Event_Token
 	Event         isEvent_Event `protobuf_oneof:"event"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -268,7 +341,7 @@ type Event struct {
 
 func (x *Event) Reset() {
 	*x = Event{}
-	mi := &file_event_proto_msgTypes[1]
+	mi := &file_event_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -280,7 +353,7 @@ func (x *Event) String() string {
 func (*Event) ProtoMessage() {}
 
 func (x *Event) ProtoReflect() protoreflect.Message {
-	mi := &file_event_proto_msgTypes[1]
+	mi := &file_event_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -293,7 +366,7 @@ func (x *Event) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Event.ProtoReflect.Descriptor instead.
 func (*Event) Descriptor() ([]byte, []int) {
-	return file_event_proto_rawDescGZIP(), []int{1}
+	return file_event_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *Event) GetEvent() isEvent_Event {
@@ -366,6 +439,15 @@ func (x *Event) GetMigrate() *MigrateEvent {
 	return nil
 }
 
+func (x *Event) GetToken() *LaunchpadTokenEvent {
+	if x != nil {
+		if x, ok := x.Event.(*Event_Token); ok {
+			return x.Token
+		}
+	}
+	return nil
+}
+
 type isEvent_Event interface {
 	isEvent_Event()
 }
@@ -398,6 +480,10 @@ type Event_Migrate struct {
 	Migrate *MigrateEvent `protobuf:"bytes,7,opt,name=migrate,proto3,oneof"`
 }
 
+type Event_Token struct {
+	Token *LaunchpadTokenEvent `protobuf:"bytes,8,opt,name=token,proto3,oneof"`
+}
+
 func (*Event_Trade) isEvent_Event() {}
 
 func (*Event_Transfer) isEvent_Event() {}
@@ -411,6 +497,8 @@ func (*Event_Burn) isEvent_Event() {}
 func (*Event_Balance) isEvent_Event() {}
 
 func (*Event_Migrate) isEvent_Event() {}
+
+func (*Event_Token) isEvent_Event() {}
 
 // 交易事件（token统一表示base token）
 type TradeEvent struct {
@@ -444,7 +532,7 @@ type TradeEvent struct {
 
 func (x *TradeEvent) Reset() {
 	*x = TradeEvent{}
-	mi := &file_event_proto_msgTypes[2]
+	mi := &file_event_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -456,7 +544,7 @@ func (x *TradeEvent) String() string {
 func (*TradeEvent) ProtoMessage() {}
 
 func (x *TradeEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_event_proto_msgTypes[2]
+	mi := &file_event_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -469,7 +557,7 @@ func (x *TradeEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TradeEvent.ProtoReflect.Descriptor instead.
 func (*TradeEvent) Descriptor() ([]byte, []int) {
-	return file_event_proto_rawDescGZIP(), []int{2}
+	return file_event_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *TradeEvent) GetType() EventType {
@@ -657,7 +745,7 @@ type TransferEvent struct {
 
 func (x *TransferEvent) Reset() {
 	*x = TransferEvent{}
-	mi := &file_event_proto_msgTypes[3]
+	mi := &file_event_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -669,7 +757,7 @@ func (x *TransferEvent) String() string {
 func (*TransferEvent) ProtoMessage() {}
 
 func (x *TransferEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_event_proto_msgTypes[3]
+	mi := &file_event_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -682,7 +770,7 @@ func (x *TransferEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TransferEvent.ProtoReflect.Descriptor instead.
 func (*TransferEvent) Descriptor() ([]byte, []int) {
-	return file_event_proto_rawDescGZIP(), []int{3}
+	return file_event_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *TransferEvent) GetType() EventType {
@@ -822,7 +910,7 @@ type LiquidityEvent struct {
 
 func (x *LiquidityEvent) Reset() {
 	*x = LiquidityEvent{}
-	mi := &file_event_proto_msgTypes[4]
+	mi := &file_event_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -834,7 +922,7 @@ func (x *LiquidityEvent) String() string {
 func (*LiquidityEvent) ProtoMessage() {}
 
 func (x *LiquidityEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_event_proto_msgTypes[4]
+	mi := &file_event_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -847,7 +935,7 @@ func (x *LiquidityEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LiquidityEvent.ProtoReflect.Descriptor instead.
 func (*LiquidityEvent) Descriptor() ([]byte, []int) {
-	return file_event_proto_rawDescGZIP(), []int{4}
+	return file_event_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *LiquidityEvent) GetType() EventType {
@@ -1032,7 +1120,7 @@ type MintToEvent struct {
 
 func (x *MintToEvent) Reset() {
 	*x = MintToEvent{}
-	mi := &file_event_proto_msgTypes[5]
+	mi := &file_event_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1044,7 +1132,7 @@ func (x *MintToEvent) String() string {
 func (*MintToEvent) ProtoMessage() {}
 
 func (x *MintToEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_event_proto_msgTypes[5]
+	mi := &file_event_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1057,7 +1145,7 @@ func (x *MintToEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MintToEvent.ProtoReflect.Descriptor instead.
 func (*MintToEvent) Descriptor() ([]byte, []int) {
-	return file_event_proto_rawDescGZIP(), []int{5}
+	return file_event_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *MintToEvent) GetType() EventType {
@@ -1165,7 +1253,7 @@ type BurnEvent struct {
 
 func (x *BurnEvent) Reset() {
 	*x = BurnEvent{}
-	mi := &file_event_proto_msgTypes[6]
+	mi := &file_event_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1177,7 +1265,7 @@ func (x *BurnEvent) String() string {
 func (*BurnEvent) ProtoMessage() {}
 
 func (x *BurnEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_event_proto_msgTypes[6]
+	mi := &file_event_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1190,7 +1278,7 @@ func (x *BurnEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BurnEvent.ProtoReflect.Descriptor instead.
 func (*BurnEvent) Descriptor() ([]byte, []int) {
-	return file_event_proto_rawDescGZIP(), []int{6}
+	return file_event_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *BurnEvent) GetType() EventType {
@@ -1296,7 +1384,7 @@ type BalanceUpdateEvent struct {
 
 func (x *BalanceUpdateEvent) Reset() {
 	*x = BalanceUpdateEvent{}
-	mi := &file_event_proto_msgTypes[7]
+	mi := &file_event_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1308,7 +1396,7 @@ func (x *BalanceUpdateEvent) String() string {
 func (*BalanceUpdateEvent) ProtoMessage() {}
 
 func (x *BalanceUpdateEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_event_proto_msgTypes[7]
+	mi := &file_event_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1321,7 +1409,7 @@ func (x *BalanceUpdateEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BalanceUpdateEvent.ProtoReflect.Descriptor instead.
 func (*BalanceUpdateEvent) Descriptor() ([]byte, []int) {
-	return file_event_proto_rawDescGZIP(), []int{7}
+	return file_event_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *BalanceUpdateEvent) GetType() EventType {
@@ -1434,7 +1522,7 @@ type MigrateEvent struct {
 
 func (x *MigrateEvent) Reset() {
 	*x = MigrateEvent{}
-	mi := &file_event_proto_msgTypes[8]
+	mi := &file_event_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1446,7 +1534,7 @@ func (x *MigrateEvent) String() string {
 func (*MigrateEvent) ProtoMessage() {}
 
 func (x *MigrateEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_event_proto_msgTypes[8]
+	mi := &file_event_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1459,7 +1547,7 @@ func (x *MigrateEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MigrateEvent.ProtoReflect.Descriptor instead.
 func (*MigrateEvent) Descriptor() ([]byte, []int) {
-	return file_event_proto_rawDescGZIP(), []int{8}
+	return file_event_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *MigrateEvent) GetType() EventType {
@@ -1686,11 +1774,175 @@ func (x *MigrateEvent) GetDestPairQuoteBalance() uint64 {
 	return 0
 }
 
+type LaunchpadTokenEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Type          EventType              `protobuf:"varint,1,opt,name=type,proto3,enum=pb.EventType" json:"type,omitempty"`                 // 事件类型（LAUNCH_TOKEN）
+	EventId       uint64                 `protobuf:"varint,2,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`              // 事件唯一 ID
+	Slot          uint64                 `protobuf:"varint,3,opt,name=slot,proto3" json:"slot,omitempty"`                                   // 区块高度
+	BlockTime     int64                  `protobuf:"varint,4,opt,name=block_time,json=blockTime,proto3" json:"block_time,omitempty"`        // 区块时间戳（秒）
+	TxHash        []byte                 `protobuf:"bytes,5,opt,name=tx_hash,json=txHash,proto3" json:"tx_hash,omitempty"`                  // 交易哈希
+	Signers       [][]byte               `protobuf:"bytes,6,rep,name=signers,proto3" json:"signers,omitempty"`                              // 签名者地址列表
+	UserWallet    []byte                 `protobuf:"bytes,7,opt,name=user_wallet,json=userWallet,proto3" json:"user_wallet,omitempty"`      // 用户地址
+	Creator       []byte                 `protobuf:"bytes,8,opt,name=creator,proto3" json:"creator,omitempty"`                              // 创建者地址（token creator）
+	Decimals      uint32                 `protobuf:"varint,9,opt,name=decimals,proto3" json:"decimals,omitempty"`                           // 精度
+	Dex           uint32                 `protobuf:"varint,10,opt,name=dex,proto3" json:"dex,omitempty"`                                    // 来源 DEX 编号（如 Pump.fun = 4）
+	TotalSupply   uint64                 `protobuf:"varint,11,opt,name=total_supply,json=totalSupply,proto3" json:"total_supply,omitempty"` // 初始总发行量
+	Token         []byte                 `protobuf:"bytes,12,opt,name=token,proto3" json:"token,omitempty"`                                 // token address
+	PairAddress   []byte                 `protobuf:"bytes,13,opt,name=pair_address,json=pairAddress,proto3" json:"pair_address,omitempty"`  // 初始交易池地址（可选）
+	Symbol        string                 `protobuf:"bytes,14,opt,name=symbol,proto3" json:"symbol,omitempty"`                               // 符号（如 WEN）
+	Name          string                 `protobuf:"bytes,15,opt,name=name,proto3" json:"name,omitempty"`                                   // 名称
+	Uri           string                 `protobuf:"bytes,16,opt,name=uri,proto3" json:"uri,omitempty"`                                     // 元数据 URI
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LaunchpadTokenEvent) Reset() {
+	*x = LaunchpadTokenEvent{}
+	mi := &file_event_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LaunchpadTokenEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LaunchpadTokenEvent) ProtoMessage() {}
+
+func (x *LaunchpadTokenEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_event_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LaunchpadTokenEvent.ProtoReflect.Descriptor instead.
+func (*LaunchpadTokenEvent) Descriptor() ([]byte, []int) {
+	return file_event_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *LaunchpadTokenEvent) GetType() EventType {
+	if x != nil {
+		return x.Type
+	}
+	return EventType_UNKNOWN
+}
+
+func (x *LaunchpadTokenEvent) GetEventId() uint64 {
+	if x != nil {
+		return x.EventId
+	}
+	return 0
+}
+
+func (x *LaunchpadTokenEvent) GetSlot() uint64 {
+	if x != nil {
+		return x.Slot
+	}
+	return 0
+}
+
+func (x *LaunchpadTokenEvent) GetBlockTime() int64 {
+	if x != nil {
+		return x.BlockTime
+	}
+	return 0
+}
+
+func (x *LaunchpadTokenEvent) GetTxHash() []byte {
+	if x != nil {
+		return x.TxHash
+	}
+	return nil
+}
+
+func (x *LaunchpadTokenEvent) GetSigners() [][]byte {
+	if x != nil {
+		return x.Signers
+	}
+	return nil
+}
+
+func (x *LaunchpadTokenEvent) GetUserWallet() []byte {
+	if x != nil {
+		return x.UserWallet
+	}
+	return nil
+}
+
+func (x *LaunchpadTokenEvent) GetCreator() []byte {
+	if x != nil {
+		return x.Creator
+	}
+	return nil
+}
+
+func (x *LaunchpadTokenEvent) GetDecimals() uint32 {
+	if x != nil {
+		return x.Decimals
+	}
+	return 0
+}
+
+func (x *LaunchpadTokenEvent) GetDex() uint32 {
+	if x != nil {
+		return x.Dex
+	}
+	return 0
+}
+
+func (x *LaunchpadTokenEvent) GetTotalSupply() uint64 {
+	if x != nil {
+		return x.TotalSupply
+	}
+	return 0
+}
+
+func (x *LaunchpadTokenEvent) GetToken() []byte {
+	if x != nil {
+		return x.Token
+	}
+	return nil
+}
+
+func (x *LaunchpadTokenEvent) GetPairAddress() []byte {
+	if x != nil {
+		return x.PairAddress
+	}
+	return nil
+}
+
+func (x *LaunchpadTokenEvent) GetSymbol() string {
+	if x != nil {
+		return x.Symbol
+	}
+	return ""
+}
+
+func (x *LaunchpadTokenEvent) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *LaunchpadTokenEvent) GetUri() string {
+	if x != nil {
+		return x.Uri
+	}
+	return ""
+}
+
 var File_event_proto protoreflect.FileDescriptor
 
 const file_event_proto_rawDesc = "" +
 	"\n" +
-	"\vevent.proto\x12\x02pb\"\xab\x01\n" +
+	"\vevent.proto\x12\x02pb\"\xde\x01\n" +
 	"\x06Events\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\rR\aversion\x12\x19\n" +
 	"\bchain_id\x18\x02 \x01(\rR\achainId\x12\x12\n" +
@@ -1698,7 +1950,13 @@ const file_event_proto_rawDesc = "" +
 	"\x06source\x18\x04 \x01(\x05R\x06source\x12!\n" +
 	"\x06events\x18\x05 \x03(\v2\t.pb.EventR\x06events\x12\x1d\n" +
 	"\n" +
-	"block_hash\x18\x06 \x01(\fR\tblockHash\"\xcb\x02\n" +
+	"block_hash\x18\x06 \x01(\fR\tblockHash\x121\n" +
+	"\fquote_prices\x18\a \x03(\v2\x0e.pb.TokenPriceR\vquotePrices\"T\n" +
+	"\n" +
+	"TokenPrice\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\fR\x05token\x12\x14\n" +
+	"\x05price\x18\x02 \x01(\x01R\x05price\x12\x1a\n" +
+	"\bdecimals\x18\x03 \x01(\rR\bdecimals\"\xfc\x02\n" +
 	"\x05Event\x12&\n" +
 	"\x05trade\x18\x01 \x01(\v2\x0e.pb.TradeEventH\x00R\x05trade\x12/\n" +
 	"\btransfer\x18\x02 \x01(\v2\x11.pb.TransferEventH\x00R\btransfer\x122\n" +
@@ -1706,7 +1964,8 @@ const file_event_proto_rawDesc = "" +
 	"\x04mint\x18\x04 \x01(\v2\x0f.pb.MintToEventH\x00R\x04mint\x12#\n" +
 	"\x04burn\x18\x05 \x01(\v2\r.pb.BurnEventH\x00R\x04burn\x122\n" +
 	"\abalance\x18\x06 \x01(\v2\x16.pb.BalanceUpdateEventH\x00R\abalance\x12,\n" +
-	"\amigrate\x18\a \x01(\v2\x10.pb.MigrateEventH\x00R\amigrateB\a\n" +
+	"\amigrate\x18\a \x01(\v2\x10.pb.MigrateEventH\x00R\amigrate\x12/\n" +
+	"\x05token\x18\b \x01(\v2\x17.pb.LaunchpadTokenEventH\x00R\x05tokenB\a\n" +
 	"\x05event\"\xa5\x06\n" +
 	"\n" +
 	"TradeEvent\x12!\n" +
@@ -1868,7 +2127,27 @@ const file_event_proto_rawDesc = "" +
 	"\x16src_pair_token_balance\x18\x1d \x01(\x04R\x13srcPairTokenBalance\x123\n" +
 	"\x16src_pair_quote_balance\x18\x1e \x01(\x04R\x13srcPairQuoteBalance\x125\n" +
 	"\x17dest_pair_token_balance\x18\x1f \x01(\x04R\x14destPairTokenBalance\x125\n" +
-	"\x17dest_pair_quote_balance\x18  \x01(\x04R\x14destPairQuoteBalance*\xae\x01\n" +
+	"\x17dest_pair_quote_balance\x18  \x01(\x04R\x14destPairQuoteBalance\"\xbc\x03\n" +
+	"\x13LaunchpadTokenEvent\x12!\n" +
+	"\x04type\x18\x01 \x01(\x0e2\r.pb.EventTypeR\x04type\x12\x19\n" +
+	"\bevent_id\x18\x02 \x01(\x04R\aeventId\x12\x12\n" +
+	"\x04slot\x18\x03 \x01(\x04R\x04slot\x12\x1d\n" +
+	"\n" +
+	"block_time\x18\x04 \x01(\x03R\tblockTime\x12\x17\n" +
+	"\atx_hash\x18\x05 \x01(\fR\x06txHash\x12\x18\n" +
+	"\asigners\x18\x06 \x03(\fR\asigners\x12\x1f\n" +
+	"\vuser_wallet\x18\a \x01(\fR\n" +
+	"userWallet\x12\x18\n" +
+	"\acreator\x18\b \x01(\fR\acreator\x12\x1a\n" +
+	"\bdecimals\x18\t \x01(\rR\bdecimals\x12\x10\n" +
+	"\x03dex\x18\n" +
+	" \x01(\rR\x03dex\x12!\n" +
+	"\ftotal_supply\x18\v \x01(\x04R\vtotalSupply\x12\x14\n" +
+	"\x05token\x18\f \x01(\fR\x05token\x12!\n" +
+	"\fpair_address\x18\r \x01(\fR\vpairAddress\x12\x16\n" +
+	"\x06symbol\x18\x0e \x01(\tR\x06symbol\x12\x12\n" +
+	"\x04name\x18\x0f \x01(\tR\x04name\x12\x10\n" +
+	"\x03uri\x18\x10 \x01(\tR\x03uri*\xae\x01\n" +
 	"\aDexType\x12\x0f\n" +
 	"\vDEX_UNKNOWN\x10\x00\x12\x12\n" +
 	"\x0eDEX_RAYDIUM_V4\x10\x01\x12\x14\n" +
@@ -1877,7 +2156,7 @@ const file_event_proto_rawDesc = "" +
 	"\vDEX_PUMPFUN\x10\x04\x12\x14\n" +
 	"\x10DEX_RAYDIUM_CPMM\x10\x05\x12\x14\n" +
 	"\x10DEX_METEORA_DLMM\x10\x06\x12\x16\n" +
-	"\x12DEX_ORCA_WHIRLPOOL\x10\a*\xca\x01\n" +
+	"\x12DEX_ORCA_WHIRLPOOL\x10\a*\xdf\x01\n" +
 	"\tEventType\x12\v\n" +
 	"\aUNKNOWN\x10\x00\x12\r\n" +
 	"\tTRADE_BUY\x10\x01\x12\x0e\n" +
@@ -1891,7 +2170,8 @@ const file_event_proto_rawDesc = "" +
 	"\rTRADE_UNKNOWN\x10\b\x12\x0f\n" +
 	"\vCREATE_POOL\x10\t\x12\v\n" +
 	"\aMIGRATE\x10\n" +
-	"\x12\x12\n" +
+	"\x12\x13\n" +
+	"\x0fLAUNCHPAD_TOKEN\x10\v\x12\x12\n" +
 	"\x0eBALANCE_UPDATE\x10<B\x17Z\x15dex-indexer-sol/pb;pbb\x06proto3"
 
 var (
@@ -1907,41 +2187,46 @@ func file_event_proto_rawDescGZIP() []byte {
 }
 
 var file_event_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_event_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_event_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_event_proto_goTypes = []any{
-	(DexType)(0),               // 0: pb.DexType
-	(EventType)(0),             // 1: pb.EventType
-	(*Events)(nil),             // 2: pb.Events
-	(*Event)(nil),              // 3: pb.Event
-	(*TradeEvent)(nil),         // 4: pb.TradeEvent
-	(*TransferEvent)(nil),      // 5: pb.TransferEvent
-	(*LiquidityEvent)(nil),     // 6: pb.LiquidityEvent
-	(*MintToEvent)(nil),        // 7: pb.MintToEvent
-	(*BurnEvent)(nil),          // 8: pb.BurnEvent
-	(*BalanceUpdateEvent)(nil), // 9: pb.BalanceUpdateEvent
-	(*MigrateEvent)(nil),       // 10: pb.MigrateEvent
+	(DexType)(0),                // 0: pb.DexType
+	(EventType)(0),              // 1: pb.EventType
+	(*Events)(nil),              // 2: pb.Events
+	(*TokenPrice)(nil),          // 3: pb.TokenPrice
+	(*Event)(nil),               // 4: pb.Event
+	(*TradeEvent)(nil),          // 5: pb.TradeEvent
+	(*TransferEvent)(nil),       // 6: pb.TransferEvent
+	(*LiquidityEvent)(nil),      // 7: pb.LiquidityEvent
+	(*MintToEvent)(nil),         // 8: pb.MintToEvent
+	(*BurnEvent)(nil),           // 9: pb.BurnEvent
+	(*BalanceUpdateEvent)(nil),  // 10: pb.BalanceUpdateEvent
+	(*MigrateEvent)(nil),        // 11: pb.MigrateEvent
+	(*LaunchpadTokenEvent)(nil), // 12: pb.LaunchpadTokenEvent
 }
 var file_event_proto_depIdxs = []int32{
-	3,  // 0: pb.Events.events:type_name -> pb.Event
-	4,  // 1: pb.Event.trade:type_name -> pb.TradeEvent
-	5,  // 2: pb.Event.transfer:type_name -> pb.TransferEvent
-	6,  // 3: pb.Event.liquidity:type_name -> pb.LiquidityEvent
-	7,  // 4: pb.Event.mint:type_name -> pb.MintToEvent
-	8,  // 5: pb.Event.burn:type_name -> pb.BurnEvent
-	9,  // 6: pb.Event.balance:type_name -> pb.BalanceUpdateEvent
-	10, // 7: pb.Event.migrate:type_name -> pb.MigrateEvent
-	1,  // 8: pb.TradeEvent.type:type_name -> pb.EventType
-	1,  // 9: pb.TransferEvent.type:type_name -> pb.EventType
-	1,  // 10: pb.LiquidityEvent.type:type_name -> pb.EventType
-	1,  // 11: pb.MintToEvent.type:type_name -> pb.EventType
-	1,  // 12: pb.BurnEvent.type:type_name -> pb.EventType
-	1,  // 13: pb.BalanceUpdateEvent.type:type_name -> pb.EventType
-	1,  // 14: pb.MigrateEvent.type:type_name -> pb.EventType
-	15, // [15:15] is the sub-list for method output_type
-	15, // [15:15] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	4,  // 0: pb.Events.events:type_name -> pb.Event
+	3,  // 1: pb.Events.quote_prices:type_name -> pb.TokenPrice
+	5,  // 2: pb.Event.trade:type_name -> pb.TradeEvent
+	6,  // 3: pb.Event.transfer:type_name -> pb.TransferEvent
+	7,  // 4: pb.Event.liquidity:type_name -> pb.LiquidityEvent
+	8,  // 5: pb.Event.mint:type_name -> pb.MintToEvent
+	9,  // 6: pb.Event.burn:type_name -> pb.BurnEvent
+	10, // 7: pb.Event.balance:type_name -> pb.BalanceUpdateEvent
+	11, // 8: pb.Event.migrate:type_name -> pb.MigrateEvent
+	12, // 9: pb.Event.token:type_name -> pb.LaunchpadTokenEvent
+	1,  // 10: pb.TradeEvent.type:type_name -> pb.EventType
+	1,  // 11: pb.TransferEvent.type:type_name -> pb.EventType
+	1,  // 12: pb.LiquidityEvent.type:type_name -> pb.EventType
+	1,  // 13: pb.MintToEvent.type:type_name -> pb.EventType
+	1,  // 14: pb.BurnEvent.type:type_name -> pb.EventType
+	1,  // 15: pb.BalanceUpdateEvent.type:type_name -> pb.EventType
+	1,  // 16: pb.MigrateEvent.type:type_name -> pb.EventType
+	1,  // 17: pb.LaunchpadTokenEvent.type:type_name -> pb.EventType
+	18, // [18:18] is the sub-list for method output_type
+	18, // [18:18] is the sub-list for method input_type
+	18, // [18:18] is the sub-list for extension type_name
+	18, // [18:18] is the sub-list for extension extendee
+	0,  // [0:18] is the sub-list for field type_name
 }
 
 func init() { file_event_proto_init() }
@@ -1949,7 +2234,7 @@ func file_event_proto_init() {
 	if File_event_proto != nil {
 		return
 	}
-	file_event_proto_msgTypes[1].OneofWrappers = []any{
+	file_event_proto_msgTypes[2].OneofWrappers = []any{
 		(*Event_Trade)(nil),
 		(*Event_Transfer)(nil),
 		(*Event_Liquidity)(nil),
@@ -1957,6 +2242,7 @@ func file_event_proto_init() {
 		(*Event_Burn)(nil),
 		(*Event_Balance)(nil),
 		(*Event_Migrate)(nil),
+		(*Event_Token)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -1964,7 +2250,7 @@ func file_event_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_event_proto_rawDesc), len(file_event_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   9,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

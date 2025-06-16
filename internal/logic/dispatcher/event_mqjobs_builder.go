@@ -1,7 +1,6 @@
 package dispatcher
 
 import (
-	"dex-indexer-sol/internal/consts"
 	"dex-indexer-sol/internal/logic/core"
 	"dex-indexer-sol/pb"
 	"dex-indexer-sol/pkg/mq"
@@ -11,7 +10,7 @@ import (
 // BuildEventKafkaJobs 构造事件类型 KafkaJob（非余额类）。
 // 每个 KafkaJob 对应一个分区，封装若干个事件（pb.Events）。
 func BuildEventKafkaJobs(
-	slot uint64,
+	txCtx *core.TxContext,
 	source int32,
 	topic string,
 	partitions int,
@@ -70,13 +69,7 @@ func BuildEventKafkaJobs(
 			jobs = append(jobs, &mq.KafkaJob{
 				Topic:     topic,
 				Partition: int32(pid),
-				Msg: &pb.Events{
-					Version: 1,
-					ChainId: consts.ChainIDSolana,
-					Slot:    slot,
-					Source:  source,
-					Events:  list,
-				},
+				Msg:       buildEventsProto(txCtx, list, source),
 			})
 		}
 	}

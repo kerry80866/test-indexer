@@ -30,6 +30,7 @@ enum EventType {
   TRADE_UNKNOWN = 8;
   CREATE_POOL = 9;
   MIGRATE = 10;
+  LAUNCHPAD_TOKEN = 11;
 
   // --- 系统/同步类事件（编号从 60 开始） ---
   BALANCE_UPDATE = 60;
@@ -43,6 +44,14 @@ message Events {
   int32 source = 4;           // 数据来源：1=GRPC补块，2=RPC推送
   repeated Event events = 5;  // 事件数组
   bytes block_hash = 6;       // 区块哈希（blockhash）
+  repeated TokenPrice quote_prices = 7; // 右对报价币价格（例如 USDC/USDT/WSOL）
+}
+
+// 单个报价币的价格信息
+message TokenPrice {
+  bytes token = 1;      // 报价币的 mint 地址
+  double price = 2;     // 报价币对应的 USD 价格（每 1 个 token 的美元价值，不是最小单位，例如 150.0 表示 1 个 token = $150）
+  uint32 decimals = 3;  // token 精度（如 USDC 是 6，WSOL 是 9）
 }
 
 // 通用事件包装结构（每条只封装一个子类型）
@@ -55,6 +64,7 @@ message Event {
     BurnEvent burn = 5;
     BalanceUpdateEvent balance = 6;
     MigrateEvent migrate = 7;
+    LaunchpadTokenEvent token = 8;
   }
 }
 
@@ -250,4 +260,29 @@ message MigrateEvent {
   uint64 src_pair_quote_balance = 30;    // 来源池 quote token 余额
   uint64 dest_pair_token_balance = 31;   // 目标池 base token 余额
   uint64 dest_pair_quote_balance = 32;   // 目标池 quote token 余额
+}
+
+message LaunchpadTokenEvent {
+  EventType type = 1;                     // 事件类型（LAUNCH_TOKEN）
+
+  uint64 event_id = 2;                   // 事件唯一 ID
+  uint64 slot = 3;                       // 区块高度
+  int64 block_time = 4;                  // 区块时间戳（秒）
+
+  bytes tx_hash = 5;                     // 交易哈希
+  repeated bytes signers = 6;            // 签名者地址列表
+
+  bytes user_wallet = 7;                 // 用户地址
+  bytes creator = 8;                     // 创建者地址（token creator）
+
+  uint32 decimals = 9;                   // 精度
+  uint32 dex = 10;                       // 来源 DEX 编号（如 Pump.fun = 4）
+  uint64 total_supply = 11;              // 初始总发行量
+
+  bytes token = 12;                      // token address
+  bytes pair_address = 13;               // 初始交易池地址（可选）
+
+  string symbol = 14;                    // 符号（如 WEN）
+  string name = 15;                      // 名称
+  string uri = 16;                       // 元数据 URI
 }

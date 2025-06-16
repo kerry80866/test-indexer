@@ -1,0 +1,72 @@
+# Go build files
+bin/
+build/
+out/
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*.idea/*.*
+
+# Compiled Go binaries
+*.o
+*.a
+
+# Go modules cache (should not be committed)
+vendor/
+
+# Dependency directories (Go Modules)
+go.sum
+
+# IDE settings - JetBrains GoLand
+.idea/
+!.idea/codeStyles/
+!.idea/inspectionProfiles/
+!.idea/modules.xml
+
+# IDE个人缓存（不应上传）
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/vcs.xml
+.idea/usage.statistics.xml
+.idea/dictionaries/
+
+# OS system files
+.DS_Store
+Thumbs.db
+
+# Logs and runtime files
+*.log
+*.pid
+
+# Temporary files
+*.swp
+*.swo
+*.tmp
+*.bak
+
+# Git itself
+.git/
+
+# Git LFS files (optional, if used)
+*.lfs
+
+# Node (if前端或swagger有用)
+node_modules/
+dist/
+
+# Optional: coverage files
+coverage.out
+
+# Ignore sensitive config
+.env
+.env.local
+config.yaml
+config/*.yaml
+*.local.yaml
+
+# Cache
+.cache/
+__pycache__/

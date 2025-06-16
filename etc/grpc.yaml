@@ -1,61 +1,62 @@
 # 日志配置
-LogConf:
-  Format: "json"      # 日志格式，开发环境建议使用 "console"，生产环境建议使用 "json"
-  LogDir: "./logs"    # 日志输出目录（默认 logs，可指定绝对路径）
-  Level: "debug"      # 日志级别，支持 debug/info/warn/error
-  Compress: false     # 旧日志是否压缩
+logger:
+  format: "json"        # 日志格式，开发环境建议使用 "console"，生产环境建议使用 "json"
+  log_dir: "./logs"     # 日志输出目录（默认 logs，可指定绝对路径）
+  level: "debug"        # 日志级别，支持 debug/info/warn/error
+  compress: false       # 旧日志是否压缩
 
-# GRPC特有配置
-Grpc:
-  Endpoint:            # gRPC 服务端地址
-  XToken:                    # 认证用的 x-token
-  StreamPingIntervalSec: 20              # Stream心跳包发送间隔（秒）
-  KeepalivePingIntervalSec: 12           # gRPC底层keepalive间隔（秒）
-  KeepalivePingTimeoutSec: 4             # gRPC底层keepalive超时（秒）
-  InitialWindowSize: 1073741824          # 单个流窗口大小（字节）, 1GB
-  InitialConnWindowSize: 1073741824      # 整个连接窗口大小（字节）, 1GB
-  MaxCallSendMsgSize: 33554432           # 单条消息最大发送字节数, 32MB
-  MaxCallRecvMsgSize: 134217728          # 单条消息最大接收字节数, 128MB
-  ReconnectIntervalSec: 2                # 每次重连之间的最小间隔（秒）
-  ConnectTimeoutSec: 12                  # gRPC 连接建立超时（秒）
-  RecvTimeoutSec: 5                      # gRPC Send 超时时间（秒）
-  SendTimeoutSec: 3                      # gRPC Recv 操作超时（秒）
-  MaxLatencyWarnMs: 3000                 # 区块延迟超过 3 秒打 warning
-  MaxLatencyDropMs: 6000                 # 区块延迟超过 6 秒断流重连
+# GRPC 特有配置
+grpc:
+  endpoint:     # gRPC 服务端地址
+  x_token:               # 认证用的 x-token
+  stream_ping_interval_sec: 20         # Stream 心跳包发送间隔（秒）
+  keepalive_ping_interval_sec: 12      # gRPC 底层 keepalive 间隔（秒）
+  keepalive_ping_timeout_sec: 4        # gRPC 底层 keepalive 超时（秒）
+  initial_window_size: 1073741824      # 单个流窗口大小（字节）, 1GB
+  initial_conn_window_size: 1073741824 # 整个连接窗口大小（字节）, 1GB
+  max_call_send_msg_size: 33554432     # 单条消息最大发送字节数, 32MB
+  max_call_recv_msg_size: 134217728    # 单条消息最大接收字节数, 128MB
+  reconnect_interval_sec: 2            # 每次重连之间的最小间隔（秒）
+  connect_timeout_sec: 12              # gRPC 连接建立超时（秒）
+  recv_timeout_sec: 5                  # gRPC Send 超时时间（秒）
+  send_timeout_sec: 3                  # gRPC Recv 操作超时（秒）
+  max_latency_warn_ms: 30000            # 区块延迟超过 3 秒打 warning
+  max_latency_drop_ms: 60000            # 区块延迟超过 6 秒断流重连
 
 # 价格服务配置
-PriceServiceConf:
-  Endpoint: "127.0.0.1:8080"
-  SyncIntervalS: 60
-  WSolPrice: 158 #需要改这个配置
+price_service:
+  endpoint: "127.0.0.1:8080"
+  sync_interval_s: 60
+  wsol_price: 156                   # 需要改这个配置
 
-TimeConf:
-  SlotDispatchTimeoutMs: 2000       # 控制整个 slot dispatch 生命周期：发事件 + Redis + DB（毫秒）
-  EventSendTimeoutMs: 1000          # 控制发送 events 消息并等待 Kafka ack 的超时时间（毫秒）
+# 时间控制配置
+time_conf:
+  slot_dispatch_timeout_ms: 2000       # 控制整个 slot dispatch 生命周期：发事件 + Redis + DB（毫秒）
+  event_send_timeout_ms: 1000          # 控制发送 events 消息并等待 Kafka ack 的超时时间（毫秒）
 
 # Kafka 生产者配置
-KafkaProducerConf:
-  Brokers: "172.19.32.50:9092"           # Kafka 服务器地址，多个地址用逗号分隔
-  BatchSize: 32768                       # 批处理大小（32KB）
-  LingerMs: 5                            # 批处理延迟（毫秒）,多久刷新一次Send缓存
-  Topics:
-    Balance: "dex_indexer_sol_balance"   # balance 事件的 topic 名称
-    Event:   "dex_indexer_sol_event"     # 普通事件（如 swap/transfer）的 topic 名称
-  Partitions:
-    Balance: 4                           # balance topic 的分区数
-    Event:   3                           # event topic 的分区数
+kafka_producer:
+  brokers: "172.19.32.50:9092"         # Kafka 服务器地址，多个地址用逗号分隔
+  batch_size: 32768                    # 批处理大小（32KB）
+  linger_ms: 5                         # 批处理延迟（毫秒）,多久刷新一次 Send 缓存
+  topics:
+    balance: "dex_indexer_sol_balance" # balance 事件的 topic 名称
+    event:   "dex_indexer_sol_event"   # 普通事件（如 swap/transfer）的 topic 名称
+  partitions:
+    balance: 4                         # balance topic 的分区数
+    event:   3                         # event topic 的分区数
 
-ProgressConf:
+# 进度控制配置
+progress:
   # 判定是否为“近期 block”的时间阈值（秒）
   # 小于该时间的 block 将直接处理（跳过 Redis & DB 判重）
   # 通常设为 60 秒，建议不低于 30 秒，避免数据过于新但未入 Redis
-  RecentThresholdSec: 60
+  recent_threshold_sec: 60
 
 # Redis 配置（用于 slot 判重状态存储）
-RedisAddr: "127.0.0.1:6379"              # Redis 服务地址（含端口）
+redis_addr: "127.0.0.1:6379"            # Redis 服务地址（含端口）
 
 # PostgreSQL 配置（用于 slot 落库持久化）
 # PostgreSQL 连接串，包含用户名、密码、数据库、地址、端口
 # 可用于从 pg 客户端验证连接是否正常
-PostgresDSN: "postgres://user:pass@localhost:5432/mydb?sslmode=disable"
-
+postgres_dsn: "postgres://user:pass@localhost:5432/mydb?sslmode=disable"

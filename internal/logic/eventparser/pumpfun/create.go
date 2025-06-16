@@ -14,9 +14,9 @@ import (
 
 type PumpCreateEvent struct {
 	Sign                 uint64
-	Name                 []byte
-	Symbol               []byte
-	Uri                  []byte
+	Name                 string
+	Symbol               string
+	Uri                  string
 	Mint                 types.Pubkey
 	BondingCurve         types.Pubkey
 	User                 types.Pubkey
@@ -151,7 +151,7 @@ func extractCreateEvent(
 		Signers:   ctx.Signers,
 		Dex:       consts.DexPumpfun,
 
-		UserWallet:  event.Creator[:],
+		UserWallet:  event.User[:],
 		PairAddress: poolAddress[:],
 
 		TokenDecimals: uint32(poolTokenBalance.Decimals),
@@ -189,9 +189,43 @@ func extractCreateEvent(
 		},
 	}
 
-	// 13. 衍生出 AddLiquidity 事件（CreatePool 隐含的首笔注入逻辑，不对应链上指令））
+	// 13. 衍生出 LaunchpadTokenEvent 事件
+	tokenEvent := &pb.LaunchpadTokenEvent{
+		Type:      pb.EventType_LAUNCHPAD_TOKEN,
+		EventId:   createPool.ID + 1,
+		Slot:      ctx.Slot,
+		BlockTime: ctx.BlockTime,
+		TxHash:    ctx.TxHash,
+		Signers:   ctx.Signers,
+		Dex:       consts.DexPumpfun,
+
+		UserWallet: event.User[:],
+		Creator:    event.Creator[:],
+
+		Decimals: uint32(poolTokenBalance.Decimals),
+
+		TotalSupply: event.TokenTotalSupply,
+		Token:       event.Mint[:],
+		PairAddress: poolAddress[:],
+
+		Symbol: event.Symbol,
+		Name:   event.Name,
+		Uri:    event.Uri,
+	}
+	launchpadTokenEvent := &core.Event{
+		ID:        tokenEvent.EventId,
+		EventType: uint32(tokenEvent.Type),
+		Key:       tokenEvent.PairAddress,
+		Event: &pb.Event{
+			Event: &pb.Event_Token{
+				Token: tokenEvent,
+			},
+		},
+	}
+
+	// 14. 衍生出 AddLiquidity 事件（CreatePool 隐含的首笔注入逻辑，不对应链上指令））
 	liquidityEvent := common.CloneLiquidityEvent(createPool)
-	liquidityEvent.ID += 1
+	liquidityEvent.ID += 2
 	liquidityEvent.Event.GetLiquidity().EventId = liquidityEvent.ID
 	liquidityEvent.EventType = uint32(pb.EventType_ADD_LIQUIDITY)
 	liquidityEvent.Event.GetLiquidity().Type = pb.EventType_ADD_LIQUIDITY
@@ -199,6 +233,7 @@ func extractCreateEvent(
 	liquidityEvent.Event.GetLiquidity().QuoteTokenAmount = 0 // 首次建池并未注入 SOL，SOL 注入发生在后续 Buy
 
 	ctx.AddEvent(createPool)
+	ctx.AddEvent(launchpadTokenEvent)
 	ctx.AddEvent(liquidityEvent)
 	return eventIndex + 1
 }

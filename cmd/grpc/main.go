@@ -7,8 +7,10 @@ import (
 	"dex-indexer-sol/internal/logic/eventparser"
 	"dex-indexer-sol/internal/logic/grpc"
 	"dex-indexer-sol/internal/svc"
+	"dex-indexer-sol/pkg/configloader"
 	"dex-indexer-sol/pkg/logger"
 	"flag"
+	"log"
 	"os"
 	"os/signal"
 	"runtime/debug"
@@ -16,7 +18,6 @@ import (
 	"time"
 
 	pb "github.com/rpcpool/yellowstone-grpc/examples/golang/proto"
-	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/core/logx"
 	zerosvc "github.com/zeromicro/go-zero/core/service"
 )
@@ -34,7 +35,9 @@ func main() {
 	flag.Parse()
 
 	var c config.GrpcConfig
-	conf.MustLoad(*configFile, &c)
+	if err := configloader.LoadConfig(*configFile, &c); err != nil {
+		log.Fatalf("配置加载失败: %v", err)
+	}
 
 	// === 初始化 zap logger 并接管 logx 输出 ===
 	logger.InitLogger(c.LogConf.ToLogOption())

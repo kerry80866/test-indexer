@@ -107,7 +107,7 @@ func (p *BlockProcessor) procBlock(block *pb.SubscribeUpdateBlock) {
 	// 4. 构建事件类 Kafka 任务
 	eventStart := time.Now()
 	eventJobs, eventCount, tradeCount, validTradeCount, transferCount := dispatcher.BuildEventKafkaJobs(
-		txCtx.Slot,
+		txCtx,
 		sourceGrpc,
 		p.sc.Config.KafkaProducerConf.Topics.Event,
 		p.sc.Config.KafkaProducerConf.Partitions.Event,
@@ -120,8 +120,7 @@ func (p *BlockProcessor) procBlock(block *pb.SubscribeUpdateBlock) {
 	// 5. 构建余额类 Kafka 任务
 	balanceStart := time.Now()
 	balanceJobs, balanceCount := dispatcher.BuildBalanceKafkaJobs(
-		txCtx.Slot,
-		txCtx.BlockTime,
+		txCtx,
 		sourceGrpc,
 		p.sc.Config.KafkaProducerConf.Topics.Balance,
 		p.sc.Config.KafkaProducerConf.Partitions.Balance,
