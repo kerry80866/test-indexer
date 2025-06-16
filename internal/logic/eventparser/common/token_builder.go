@@ -1,8 +1,8 @@
 package common
 
 import (
-	"github.com/dex-indexer-sol/internal/logic/core"
-	"github.com/dex-indexer-sol/pb"
+	"dex-indexer-sol/internal/logic/core"
+	"dex-indexer-sol/pb"
 )
 
 // BuildTransferEvent 构造标准的 TransferEvent 并封装为 core.Event。

@@ -1,10 +1,10 @@
 package dispatcher
 
 import (
-	"github.com/dex-indexer-sol/internal/logic/core"
-	"github.com/dex-indexer-sol/pb"
-	"github.com/dex-indexer-sol/pkg/mq"
-	"github.com/dex-indexer-sol/pkg/utils"
+	"dex-indexer-sol/internal/logic/core"
+	"dex-indexer-sol/internal/pkg/mq"
+	"dex-indexer-sol/internal/pkg/utils"
+	"dex-indexer-sol/pb"
 )
 
 // BuildEventKafkaJobs 构造事件类型 KafkaJob（非余额类）。

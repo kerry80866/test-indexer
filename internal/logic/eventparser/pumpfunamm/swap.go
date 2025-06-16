@@ -1,11 +1,11 @@
 package pumpfunamm
 
 import (
-	"github.com/dex-indexer-sol/internal/consts"
-	"github.com/dex-indexer-sol/internal/logic/core"
-	"github.com/dex-indexer-sol/internal/logic/eventparser/common"
-	"github.com/dex-indexer-sol/internal/tools"
-	"github.com/dex-indexer-sol/pkg/logger"
+	"dex-indexer-sol/internal/consts"
+	"dex-indexer-sol/internal/logic/core"
+	"dex-indexer-sol/internal/logic/eventparser/common"
+	"dex-indexer-sol/internal/pkg/logger"
+	"dex-indexer-sol/internal/tools"
 )
 
 // extractSwapEvent 解析 Pump.fun AMM 的 swap 事件，构造标准 TradeEvent（BUY / SELL）。

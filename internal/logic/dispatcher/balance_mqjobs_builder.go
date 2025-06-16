@@ -1,11 +1,11 @@
 package dispatcher
 
 import (
-	"github.com/dex-indexer-sol/internal/logic/core"
-	"github.com/dex-indexer-sol/pb"
-	"github.com/dex-indexer-sol/pkg/mq"
-	"github.com/dex-indexer-sol/pkg/types"
-	"github.com/dex-indexer-sol/pkg/utils"
+	"dex-indexer-sol/internal/logic/core"
+	"dex-indexer-sol/internal/pkg/mq"
+	"dex-indexer-sol/internal/pkg/types"
+	"dex-indexer-sol/internal/pkg/utils"
+	"dex-indexer-sol/pb"
 	"sort"
 	"sync"
 )

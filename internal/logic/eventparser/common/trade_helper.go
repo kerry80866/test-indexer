@@ -1,9 +1,9 @@
 package common
 
 import (
+	"dex-indexer-sol/internal/consts"
+	"dex-indexer-sol/internal/logic/core"
 	sdktoken "github.com/blocto/solana-go-sdk/program/token"
-	"github.com/dex-indexer-sol/internal/consts"
-	"github.com/dex-indexer-sol/internal/logic/core"
 )
 
 // SwapInstructionIndex 表示 Swap 操作中涉及的关键账户索引。

@@ -1,11 +1,11 @@
 package dispatcher
 
 import (
+	"dex-indexer-sol/internal/consts"
+	"dex-indexer-sol/internal/logic/core"
+	"dex-indexer-sol/internal/tools"
+	"dex-indexer-sol/pb"
 	"fmt"
-	"github.com/dex-indexer-sol/internal/consts"
-	"github.com/dex-indexer-sol/internal/logic/core"
-	"github.com/dex-indexer-sol/internal/tools"
-	"github.com/dex-indexer-sol/pb"
 )
 
 func buildEventsProto(ctx *core.TxContext, events []*pb.Event, source int32) *pb.Events {

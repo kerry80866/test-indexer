@@ -1,8 +1,8 @@
 package common
 
 import (
-	"github.com/dex-indexer-sol/internal/logic/core"
-	"github.com/dex-indexer-sol/pkg/types"
+	"dex-indexer-sol/internal/logic/core"
+	"dex-indexer-sol/internal/pkg/types"
 	"github.com/mr-tron/base58"
 )
 

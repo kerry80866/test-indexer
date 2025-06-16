@@ -1,10 +1,10 @@
 package common
 
 import (
+	"dex-indexer-sol/internal/consts"
+	"dex-indexer-sol/internal/logic/core"
+	"dex-indexer-sol/internal/pkg/types"
 	sdktoken "github.com/blocto/solana-go-sdk/program/token"
-	"github.com/dex-indexer-sol/internal/consts"
-	"github.com/dex-indexer-sol/internal/logic/core"
-	"github.com/dex-indexer-sol/pkg/types"
 )
 
 type AddLiquidityResult struct {

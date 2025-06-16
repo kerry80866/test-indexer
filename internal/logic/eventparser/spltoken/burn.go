@@ -1,8 +1,8 @@
 package spltoken
 
 import (
-	"github.com/dex-indexer-sol/internal/logic/core"
-	"github.com/dex-indexer-sol/internal/logic/eventparser/common"
+	"dex-indexer-sol/internal/logic/core"
+	"dex-indexer-sol/internal/logic/eventparser/common"
 )
 
 // extractTokenBurnEvent 尝试将当前指令解析为 SPL Token 的 Burn 或 BurnChecked 操作。

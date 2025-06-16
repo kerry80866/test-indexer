@@ -2,8 +2,8 @@ package mq
 
 import (
 	"context"
+	"dex-indexer-sol/pb"
 	"fmt"
-	"github.com/dex-indexer-sol/pb"
 	"testing"
 	"time"
 

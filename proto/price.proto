@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package price;
 
-option go_package = "github.com/dex-indexer-sol/pb;pb";
+option go_package = "dex-indexer-sol/pb;pb";
 
 service PriceService {
   rpc GetPriceHistory (GetPriceHistoryRequest) returns (GetPriceHistoryResponse);

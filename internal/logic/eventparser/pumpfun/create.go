@@ -1,13 +1,13 @@
 package pumpfun
 
 import (
-	"github.com/dex-indexer-sol/internal/consts"
-	"github.com/dex-indexer-sol/internal/logic/core"
-	"github.com/dex-indexer-sol/internal/logic/eventparser/common"
-	"github.com/dex-indexer-sol/internal/tools"
-	"github.com/dex-indexer-sol/pb"
-	"github.com/dex-indexer-sol/pkg/logger"
-	"github.com/dex-indexer-sol/pkg/types"
+	"dex-indexer-sol/internal/consts"
+	"dex-indexer-sol/internal/logic/core"
+	"dex-indexer-sol/internal/logic/eventparser/common"
+	"dex-indexer-sol/internal/pkg/logger"
+	"dex-indexer-sol/internal/pkg/types"
+	"dex-indexer-sol/internal/tools"
+	"dex-indexer-sol/pb"
 	"github.com/near/borsh-go"
 	"runtime/debug"
 )

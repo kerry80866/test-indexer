@@ -2,9 +2,9 @@ package mq
 
 import (
 	"context"
+	"dex-indexer-sol/internal/pkg/logger"
+	"dex-indexer-sol/internal/pkg/utils"
 	"fmt"
-	"github.com/dex-indexer-sol/pkg/logger"
-	"github.com/dex-indexer-sol/pkg/utils"
 	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"

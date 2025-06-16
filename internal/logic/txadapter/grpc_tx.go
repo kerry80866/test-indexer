@@ -1,11 +1,11 @@
 package txadapter
 
 import (
+	"dex-indexer-sol/internal/logic/core"
+	"dex-indexer-sol/internal/pkg/types"
+	"dex-indexer-sol/internal/pkg/utils"
+	"dex-indexer-sol/internal/tools"
 	"fmt"
-	"github.com/dex-indexer-sol/internal/logic/core"
-	"github.com/dex-indexer-sol/internal/tools"
-	"github.com/dex-indexer-sol/pkg/types"
-	"github.com/dex-indexer-sol/pkg/utils"
 	pb "github.com/rpcpool/yellowstone-grpc/examples/golang/proto"
 )
 

@@ -2172,7 +2172,7 @@ const file_event_proto_rawDesc = "" +
 	"\aMIGRATE\x10\n" +
 	"\x12\x13\n" +
 	"\x0fLAUNCHPAD_TOKEN\x10\v\x12\x12\n" +
-	"\x0eBALANCE_UPDATE\x10<B\"Z github.com/dex-indexer-sol/pb;pbb\x06proto3"
+	"\x0eBALANCE_UPDATE\x10<B\x17Z\x15dex-indexer-sol/pb;pbb\x06proto3"
 
 var (
 	file_event_proto_rawDescOnce sync.Once

@@ -1,11 +1,11 @@
 package raydiumcpmm
 
 import (
-	"github.com/dex-indexer-sol/internal/consts"
-	"github.com/dex-indexer-sol/internal/logic/core"
-	"github.com/dex-indexer-sol/internal/logic/eventparser/common"
-	"github.com/dex-indexer-sol/pb"
-	"github.com/dex-indexer-sol/pkg/logger"
+	"dex-indexer-sol/internal/consts"
+	"dex-indexer-sol/internal/logic/core"
+	"dex-indexer-sol/internal/logic/eventparser/common"
+	"dex-indexer-sol/internal/pkg/logger"
+	"dex-indexer-sol/pb"
 )
 
 // 示例交易：https://solscan.io/tx/2Gaqukq8fCjR5SMy9XKPp2LqYZXk1RckD1HibUs5dAw2TBTT4rQFbHXGk7DpqFZm1jVxkTb75mr93UDdyXzs1x5g

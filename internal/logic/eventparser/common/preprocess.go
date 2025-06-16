@@ -1,11 +1,11 @@
 package common
 
 import (
+	"dex-indexer-sol/internal/consts"
+	"dex-indexer-sol/internal/logic/core"
+	"dex-indexer-sol/internal/pkg/logger"
+	"dex-indexer-sol/internal/pkg/types"
 	sdktoken "github.com/blocto/solana-go-sdk/program/token"
-	"github.com/dex-indexer-sol/internal/consts"
-	"github.com/dex-indexer-sol/internal/logic/core"
-	"github.com/dex-indexer-sol/pkg/logger"
-	"github.com/dex-indexer-sol/pkg/types"
 )
 
 // PreScanInitAccountBalances 扫描指令列表中 InitializeAccount 系指令，并尝试补充 ctx.Balances 信息。

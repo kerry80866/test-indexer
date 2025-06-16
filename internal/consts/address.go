@@ -1,6 +1,6 @@
 package consts
 
-import "github.com/dex-indexer-sol/pkg/types"
+import "dex-indexer-sol/internal/pkg/types"
 
 // Base58 地址常量（可读性高，适合配置与日志使用）
 const (

@@ -1,10 +1,10 @@
 package pumpfun
 
 import (
+	"dex-indexer-sol/internal/consts"
+	"dex-indexer-sol/internal/logic/core"
+	"dex-indexer-sol/internal/pkg/types"
 	"encoding/binary"
-	"github.com/dex-indexer-sol/internal/consts"
-	"github.com/dex-indexer-sol/internal/logic/core"
-	"github.com/dex-indexer-sol/pkg/types"
 )
 
 const Event uint64 = 0xe445a52e51cb9a1d
