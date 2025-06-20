@@ -5,7 +5,6 @@ import (
 	"dex-indexer-sol/internal/logic/core"
 	"dex-indexer-sol/internal/pkg/logger"
 	"dex-indexer-sol/internal/pkg/types"
-	"dex-indexer-sol/internal/pkg/utils"
 	"dex-indexer-sol/pb"
 )
 
@@ -93,7 +92,6 @@ func buildBuyEvent(
 		})
 	}
 
-	fillUsdEstimate(event, quote, ctx)
 	return event
 }
 
@@ -138,19 +136,5 @@ func buildSellEvent(
 		})
 	}
 
-	fillUsdEstimate(event, quote, ctx)
 	return event
-}
-
-// fillUsdEstimate 用 quote token 价格补全交易估值。
-func fillUsdEstimate(event *pb.TradeEvent, quote types.Pubkey, ctx *ParserContext) {
-	if quoteUsd, ok := ctx.Tx.TxCtx.GetQuoteUsd(quote); ok {
-		baseAmount := float64(event.TokenAmount) / utils.Pow10(event.TokenDecimals)
-		quoteAmount := float64(event.QuoteTokenAmount) / utils.Pow10(event.QuoteDecimals)
-
-		event.AmountUsd = quoteAmount * quoteUsd
-		if baseAmount > 0 {
-			event.PriceUsd = event.AmountUsd / baseAmount
-		}
-	}
 }

@@ -1,6 +1,7 @@
-package dispatcher
+package jobbuilder
 
 import (
+	"dex-indexer-sol/internal/consts"
 	"dex-indexer-sol/internal/logic/core"
 	"dex-indexer-sol/internal/pkg/mq"
 	"dex-indexer-sol/internal/pkg/types"
@@ -14,6 +15,7 @@ import (
 // 每个 KafkaJob 对应一个分区，内部包含多个 BalanceUpdateEvent。
 func BuildBalanceKafkaJobs(
 	txCtx *core.TxContext,
+	quotePrices []*pb.TokenPrice,
 	source int32,
 	topic string,
 	partitions int,
@@ -55,7 +57,7 @@ func BuildBalanceKafkaJobs(
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			jobs[j] = buildBalancePartitionJob(txCtx, source, topic, j, buckets[j])
+			jobs[j] = buildBalancePartitionJob(txCtx, quotePrices, source, topic, j, buckets[j])
 		}()
 	}
 	wg.Wait()
@@ -77,6 +79,7 @@ func BuildBalanceKafkaJobs(
 // buildBalancePartitionJob 构建指定分区内的 KafkaJob。
 func buildBalancePartitionJob(
 	txCtx *core.TxContext,
+	quotePrices []*pb.TokenPrice,
 	source int32,
 	topic string,
 	partition int,
@@ -134,6 +137,14 @@ func buildBalancePartitionJob(
 	return &mq.KafkaJob{
 		Topic:     topic,
 		Partition: int32(partition),
-		Msg:       buildEventsProto(txCtx, events, source),
+		Msg: &pb.Events{
+			Version:     1,
+			ChainId:     consts.ChainIDSolana,
+			Slot:        txCtx.Slot,
+			Source:      source,
+			Events:      events,
+			BlockHash:   txCtx.BlockHash[:],
+			QuotePrices: quotePrices,
+		},
 	}
 }

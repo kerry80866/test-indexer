@@ -19,7 +19,8 @@ type ParserContext struct {
 	LogMessages []string                            // tx.Meta.LogMessages，用于日志判断
 	Balances    map[types.Pubkey]*core.TokenBalance // tokenAccount → TokenBalance 映射
 
-	Events []*core.Event // 当前交易解析出的事件
+	Events      []*core.Event
+	PriceEvents []*core.PriceEvent
 }
 
 // TxHashString 返回交易签名的 Base58 编码形式。
@@ -36,6 +37,16 @@ func (ctx *ParserContext) AddEvent(event *core.Event) {
 func (ctx *ParserContext) TakeEvents() []*core.Event {
 	events := ctx.Events
 	ctx.Events = nil
+	return events
+}
+
+func (ctx *ParserContext) AddPriceEvent(event *core.PriceEvent) {
+	ctx.PriceEvents = append(ctx.PriceEvents, event)
+}
+
+func (ctx *ParserContext) TakePriceEvents() []*core.PriceEvent {
+	events := ctx.PriceEvents
+	ctx.PriceEvents = nil
 	return events
 }
 
@@ -62,5 +73,6 @@ func BuildParserContext(tx *core.AdaptedTx) *ParserContext {
 		LogMessages: tx.LogMessages,
 		Balances:    tx.Balances,
 		Events:      make([]*core.Event, 0, len(tx.Instructions)),
+		PriceEvents: make([]*core.PriceEvent, 0, 4),
 	}
 }

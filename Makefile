@@ -15,7 +15,7 @@ proto-price:
 		--proto_path=proto \
 		--go_out=pb --go_opt=paths=source_relative \
 		--go-grpc_out=pb --go-grpc_opt=paths=source_relative \
-		proto/price.proto
+		proto/proto_price.proto
 
 proto-event:
 	@mkdir -p pb

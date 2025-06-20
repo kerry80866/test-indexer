@@ -1,25 +1,22 @@
 package main
 
 import (
-	"dex-indexer-sol/internal/cache"
 	"dex-indexer-sol/internal/config"
-	"dex-indexer-sol/internal/consts"
 	"dex-indexer-sol/internal/logic/eventparser"
 	"dex-indexer-sol/internal/logic/grpc"
 	"dex-indexer-sol/internal/pkg/configloader"
 	"dex-indexer-sol/internal/pkg/logger"
+	"dex-indexer-sol/internal/service"
 	"dex-indexer-sol/internal/svc"
 	"flag"
+	pb "github.com/rpcpool/yellowstone-grpc/examples/golang/proto"
+	"github.com/zeromicro/go-zero/core/logx"
+	zerosvc "github.com/zeromicro/go-zero/core/service"
 	"log"
 	"os"
 	"os/signal"
 	"runtime/debug"
 	"syscall"
-	"time"
-
-	pb "github.com/rpcpool/yellowstone-grpc/examples/golang/proto"
-	"github.com/zeromicro/go-zero/core/logx"
-	zerosvc "github.com/zeromicro/go-zero/core/service"
 )
 
 var configFile = flag.String("f", "etc/grpc.yaml", "the config file")
@@ -52,24 +49,13 @@ func main() {
 	eventparser.Init()
 
 	// 初始化价格同步服务
-	//priceSyncService, err := service.NewPriceSyncService(&c.PriceServiceConf, serviceContext.PriceCache)
-	//if err != nil {
-	//	panic(err)
-	//}
-	serviceContext.PriceCache.UpdateFrom(map[string][]cache.TokenPricePoint{
-		consts.WSOLMintStr: {
-			{PriceUsd: serviceContext.Config.PriceServiceConf.WSolPrice, Timestamp: time.Now().Unix()},
-		},
-		consts.USDCMintStr: {
-			{PriceUsd: 1.0, Timestamp: time.Now().Unix()},
-		},
-		consts.USDTMintStr: {
-			{PriceUsd: 1.0, Timestamp: time.Now().Unix()},
-		},
-	})
+	priceSyncService, err := service.NewRpcPriceSyncService(&c.PriceServiceConf, serviceContext.PriceCache)
+	if err != nil {
+		panic(err)
+	}
 
 	sg := zerosvc.NewServiceGroup()
-	//sg.Add(priceSyncService)
+	sg.Add(priceSyncService)
 
 	blockChan := make(chan *pb.SubscribeUpdateBlock, 200)
 	defer close(blockChan)

@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v5.29.3
-// source: price.proto
+// source: proto_price.proto
 
 package pb
 
@@ -19,7 +19,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	PriceService_GetPriceHistory_FullMethodName = "/price.PriceService/GetPriceHistory"
+	PriceService_GetPriceHistory_FullMethodName = "/quote.PriceService/GetPriceHistory"
 )
 
 // PriceServiceClient is the client API for PriceService service.
@@ -108,7 +108,7 @@ func _PriceService_GetPriceHistory_Handler(srv interface{}, ctx context.Context,
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var PriceService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "price.PriceService",
+	ServiceName: "quote.PriceService",
 	HandlerType: (*PriceServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -117,5 +117,5 @@ var PriceService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "price.proto",
+	Metadata: "proto_price.proto",
 }

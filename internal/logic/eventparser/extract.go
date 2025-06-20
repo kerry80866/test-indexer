@@ -4,6 +4,7 @@ import (
 	"dex-indexer-sol/internal/logic/core"
 	"dex-indexer-sol/internal/logic/eventparser/common"
 	"dex-indexer-sol/internal/logic/eventparser/meteoradlmm"
+	"dex-indexer-sol/internal/logic/eventparser/oracle"
 	"dex-indexer-sol/internal/logic/eventparser/orcawhirlpool"
 	"dex-indexer-sol/internal/logic/eventparser/pumpfun"
 	"dex-indexer-sol/internal/logic/eventparser/pumpfunamm"
@@ -31,14 +32,16 @@ func Init() {
 	pumpfun.RegisterHandlers(handlers)
 	meteoradlmm.RegisterHandlers(handlers)
 	orcawhirlpool.RegisterHandlers(handlers)
+	oracle.RegisterHandlers(handlers)
 }
 
-func ExtractEventsFromTx(adaptedTx *core.AdaptedTx) (result []*core.Event) {
+func ExtractEventsFromTx(adaptedTx *core.AdaptedTx) (events []*core.Event, priceEvents []*core.PriceEvent) {
 	defer func() {
 		if r := recover(); r != nil {
 			txHash := base58.Encode(adaptedTx.Signature)
 			logger.Errorf("[eventparser::ExtractEventsFromTx] panic tx=%s: %+v\nstack: %s", txHash, r, debug.Stack())
-			result = nil
+			events = nil
+			priceEvents = nil
 		}
 	}()
 
@@ -58,5 +61,5 @@ func ExtractEventsFromTx(adaptedTx *core.AdaptedTx) (result []*core.Event) {
 		}
 		i++
 	}
-	return ctx.TakeEvents()
+	return ctx.TakeEvents(), ctx.TakePriceEvents()
 }

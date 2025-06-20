@@ -6,19 +6,13 @@ import (
 	"dex-indexer-sol/internal/pkg/types"
 )
 
-type QuotePrice struct {
-	Token    types.Pubkey // quote token（如 WSOL、USDC、USDT）
-	PriceUsd float64      // 美元价格（非最小单位，例如 160.0）
-}
-
 // TxContext 表示交易所属区块的上下文信息，包含时间、高度、价格等元数据。
 type TxContext struct {
-	BlockTime   int64        // 区块时间戳（Unix 秒）
-	Slot        uint64       // 当前 Slot（Solana 高度单位）
-	ParentSlot  uint64       // 父 Slot（用于分叉检测和回滚）
-	BlockHeight uint64       // 区块高度（辅助比对）
-	BlockHash   types.Hash   // 区块哈希（辅助去重与 fork 检测）
-	QuotesPrice []QuotePrice // quote token 的美元价格（数组更适合小量查找）
+	BlockTime   int64      // 区块时间戳（Unix 秒）
+	Slot        uint64     // 当前 Slot（Solana 高度单位）
+	ParentSlot  uint64     // 父 Slot（用于分叉检测和回滚）
+	BlockHeight uint64     // 区块高度（辅助比对）
+	BlockHash   types.Hash // 区块哈希（辅助去重与 fork 检测）
 }
 
 // AdaptedInstruction 表示一条主指令或 inner 指令，来源于 Solana Transaction 中的 message.instructions 或 innerInstructions。
@@ -109,15 +103,6 @@ func (tx *AdaptedTx) AddTokenDecimals(mint types.Pubkey, decimals uint8) {
 		Token:    mint,
 		Decimals: decimals,
 	})
-}
-
-func (ctx *TxContext) GetQuoteUsd(token types.Pubkey) (float64, bool) {
-	for _, q := range ctx.QuotesPrice {
-		if q.Token == token {
-			return q.PriceUsd, true
-		}
-	}
-	return 0, false
 }
 
 func (tx *AdaptedTx) AppendSolToTokenBalances(solBalance *SolBalance) {

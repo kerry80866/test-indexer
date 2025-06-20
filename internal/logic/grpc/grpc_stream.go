@@ -84,7 +84,7 @@ func NewGrpcStreamManager(sc *svc.GrpcServiceContext, blockChan chan *pb.Subscri
 }
 
 func (m *GrpcStreamManager) Start() {
-	m.mustConnect()
+	m.mustConnect(0, 0)
 }
 
 func (m *GrpcStreamManager) Stop() {
@@ -117,7 +117,7 @@ func (m *GrpcStreamManager) Stop() {
 }
 
 // 内部循环直到连接成功
-func (m *GrpcStreamManager) mustConnect() {
+func (m *GrpcStreamManager) mustConnect(lastBlockNumber int64, lastSlot uint64) {
 	for {
 		m.mu.Lock()
 		if m.stopped {
@@ -135,7 +135,7 @@ func (m *GrpcStreamManager) mustConnect() {
 		}
 		logger.Infof("[GrpcStream] Connecting... Attempt %d", m.reconnectAttempts+1)
 		m.reconnectAttempts++
-		err := m.connect()
+		err := m.connect(lastBlockNumber, lastSlot)
 		if err == nil {
 			return // 连接成功
 		}
@@ -143,7 +143,7 @@ func (m *GrpcStreamManager) mustConnect() {
 	}
 }
 
-func buildSubscribeRequest() *pb.SubscribeRequest {
+func buildSubscribeRequest(baseBlockTime int64, baseSlot uint64) *pb.SubscribeRequest {
 	blocks := make(map[string]*pb.SubscribeRequestFilterBlocks)
 	blocks["blocks"] = &pb.SubscribeRequestFilterBlocks{
 		AccountInclude:      consts.GrpcAccountInclude,
@@ -152,14 +152,23 @@ func buildSubscribeRequest() *pb.SubscribeRequest {
 		IncludeEntries:      boolPtr(false), // IncludeEntries 是 Solana 底层的日志，普通业务基本没用。
 	}
 	commitment := pb.CommitmentLevel_CONFIRMED
+
+	var fromSlot *uint64
+	if baseBlockTime > 0 && baseSlot > 0 {
+		// quickNode 不支持 FromSlot 参数，启用后会报错：
+		//slot := estimateCurrentSlot(baseBlockTime, baseSlot)
+		//fromSlot = &slot
+	}
+
 	return &pb.SubscribeRequest{
 		Blocks:     blocks,
 		Commitment: &commitment,
+		FromSlot:   fromSlot,
 	}
 }
 
 // connect 只尝试一次连接
-func (m *GrpcStreamManager) connect() error {
+func (m *GrpcStreamManager) connect(lastBlockNumber int64, lastSlot uint64) error {
 	m.mu.Lock()
 	if m.stopped {
 		m.mu.Unlock()
@@ -195,7 +204,7 @@ func (m *GrpcStreamManager) connect() error {
 		return err // 只返回错误
 	}
 
-	req := buildSubscribeRequest()
+	req := buildSubscribeRequest(lastBlockNumber, lastSlot)
 	err = sendWithTimeout(m.connCtx, stream.Send, req, time.Duration(m.sendTimeoutSec)*time.Second)
 	if err != nil {
 		logger.Errorf("[GrpcStream] Failed to send request: %v", err)
@@ -217,6 +226,7 @@ func (m *GrpcStreamManager) connect() error {
 func (m *GrpcStreamManager) blockRecvLoop(ctx context.Context) {
 	const warnSlotStep = 50
 	var lastSlot uint64 = 0
+	var lastBlockTime int64 = 0
 	var lastWarnSlot uint64 = 0
 	var totalLatency int64 = 0
 	var count int64 = 0
@@ -235,7 +245,7 @@ func (m *GrpcStreamManager) blockRecvLoop(ctx context.Context) {
 			now := time.Now()
 			if err != nil {
 				logger.Errorf("[GrpcStream] Stream error: %v", err)
-				m.reconnect()
+				m.reconnect(lastBlockTime, lastSlot)
 				return
 			}
 
@@ -246,9 +256,9 @@ func (m *GrpcStreamManager) blockRecvLoop(ctx context.Context) {
 					logger.Errorf("[GrpcStream] slot skipped: last slot = %d, current slot = %d", lastSlot, u.Block.Slot)
 				}
 				lastSlot = u.Block.Slot
+				lastBlockTime = u.Block.BlockTime.Timestamp * 1000
 
-				blockTime := u.Block.BlockTime.Timestamp * 1000
-				interval := now.UnixMilli() - blockTime // 算出收到这个区块时的延迟（ms）
+				interval := now.UnixMilli() - lastBlockTime // 算出收到这个区块时的延迟（ms）
 				totalLatency += interval
 				count++
 				avgLatency := totalLatency / count
@@ -265,7 +275,7 @@ func (m *GrpcStreamManager) blockRecvLoop(ctx context.Context) {
 				last = now
 				if interval > dropThreshold {
 					logger.Errorf("[GrpcStream] slot=%d, latency too high: %dms > %dms, reconnecting", u.Block.Slot, interval, dropThreshold)
-					m.reconnect()
+					m.reconnect(lastBlockTime, lastSlot)
 					return
 				} else if interval > warnThreshold && lastSlot-lastWarnSlot >= warnSlotStep {
 					logger.Warnf("[GrpcStream] slot=%d, high latency: %dms > %dms", u.Block.Slot, interval, warnThreshold)
@@ -275,7 +285,7 @@ func (m *GrpcStreamManager) blockRecvLoop(ctx context.Context) {
 
 			if time.Since(last) > recvTimeout {
 				logger.Errorf("[GrpcStream] %v未收到block，触发重连", recvTimeout)
-				m.reconnect()
+				m.reconnect(lastBlockTime, lastSlot)
 				return
 			}
 		}
@@ -413,7 +423,7 @@ func (m *GrpcStreamManager) pingLoop(ctx context.Context) {
 	}
 }
 
-func (m *GrpcStreamManager) reconnect() {
+func (m *GrpcStreamManager) reconnect(lastBlockNumber int64, lastSlot uint64) {
 	m.mu.Lock()
 	if m.stopped {
 		m.mu.Unlock()
@@ -425,9 +435,23 @@ func (m *GrpcStreamManager) reconnect() {
 	}
 	m.mu.Unlock()
 
-	go m.mustConnect()
+	go m.mustConnect(lastBlockNumber, lastSlot)
 }
 
 func boolPtr(b bool) *bool {
 	return &b
+}
+
+// estimateCurrentSlot 推算当前应处于哪个 slot（以指定 blockTime/slot 为基准）
+// slotOffset 表示从估算值中回退的 slot 数，防止错过早期推送
+func estimateCurrentSlot(baseBlockTime int64, baseSlot uint64) uint64 {
+	const slotsPerSecond = 2.5
+	const slotOffset = 4
+
+	delta := time.Now().Unix() - baseBlockTime
+	estimated := baseSlot + uint64(float64(delta)*slotsPerSecond) - slotOffset
+	if estimated > baseSlot {
+		return estimated
+	}
+	return baseSlot
 }

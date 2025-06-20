@@ -7,7 +7,7 @@ logger:
 
 # GRPC 特有配置
 grpc:
-  endpoint:     # gRPC 服务端地址
+  endpoint: damp-red-needle.solana-mainnet.quiknode.pro:10000   # gRPC 服务端地址
   x_token:               # 认证用的 x-token
   stream_ping_interval_sec: 20         # Stream 心跳包发送间隔（秒）
   keepalive_ping_interval_sec: 12      # gRPC 底层 keepalive 间隔（秒）
@@ -25,9 +25,9 @@ grpc:
 
 # 价格服务配置
 price_service:
-  endpoint: "127.0.0.1:8080"
-  sync_interval_s: 60
-  wsol_price: 156                   # 需要改这个配置
+  endpoint: "https://api2.pythnet.pyth.network"
+  sync_interval_s: 3
+  wsol_price: 153.6                    # 需要改这个配置
 
 # 时间控制配置
 time_conf:

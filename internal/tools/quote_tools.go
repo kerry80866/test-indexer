@@ -18,6 +18,13 @@ var USDQuoteMints = []types.Pubkey{
 	consts.USDTMint,
 }
 
+// USDQuoteMintStrs 是 USDQuoteMints 对应的字符串形式（常用于配置、日志、比较等）
+var USDQuoteMintStrs = []string{
+	consts.WSOLMintStr,
+	consts.USDCMintStr,
+	consts.USDTMintStr,
+}
+
 var QuoteDecimals = map[types.Pubkey]uint8{
 	consts.WSOLMint: WSOLDecimals,
 	consts.USDCMint: USDCDecimals,

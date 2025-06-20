@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package price;
+package quote;
 
-option go_package = "dex-indexer-sol/pb;pb";
+option go_package = "dex-quote-svc/pb;pb";
 
 service PriceService {
   rpc GetPriceHistory (GetPriceHistoryRequest) returns (GetPriceHistoryResponse);

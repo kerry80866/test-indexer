@@ -6,7 +6,6 @@ import (
 	"dex-indexer-sol/internal/logic/eventparser/common"
 	"dex-indexer-sol/internal/pkg/logger"
 	"dex-indexer-sol/internal/pkg/types"
-	"dex-indexer-sol/internal/pkg/utils"
 	"dex-indexer-sol/pb"
 	"encoding/binary"
 	"github.com/near/borsh-go"
@@ -216,21 +215,10 @@ func extractSwapEvent(
 		UserQuoteBalance: userSolBalance.PostBalance,   // 交易后用户的 quote 余额（SOL）
 	}
 
-	// 12. 补充 USD 估值
-	if quoteUsd, ok := ctx.Tx.TxCtx.GetQuoteUsd(consts.WSOLMint); ok {
-		baseAmount := float64(tradeEvent.TokenAmount) / utils.Pow10(tradeEvent.TokenDecimals)
-		quoteAmount := float64(tradeEvent.QuoteTokenAmount) / utils.Pow10(tradeEvent.QuoteDecimals)
-
-		tradeEvent.AmountUsd = quoteAmount * quoteUsd
-		if baseAmount > 0 {
-			tradeEvent.PriceUsd = tradeEvent.AmountUsd / baseAmount
-		}
-	}
-
-	// 13. 将 pair 的 SOL 余额补充为标准 token balance，统一参与后续的余额与估值处理
+	// 12. 将 pair 的 SOL 余额补充为标准 token balance，统一参与后续的余额与估值处理
 	ctx.Tx.AppendSolToTokenBalances(pairSolBalance)
 
-	// 14. 添加事件到上下文
+	// 13. 添加事件到上下文
 	ctx.AddEvent(&core.Event{
 		ID:        tradeEvent.EventId,
 		EventType: uint32(tradeEvent.Type),

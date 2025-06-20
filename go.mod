@@ -7,10 +7,10 @@ require (
 	github.com/confluentinc/confluent-kafka-go/v2 v2.10.0
 	github.com/mr-tron/base58 v1.2.0
 	github.com/near/borsh-go v0.3.2-0.20220516180422-1ff87d108454
-	github.com/redis/go-redis/v9 v9.8.0
+	github.com/redis/go-redis/v9 v9.10.0
 	github.com/rpcpool/yellowstone-grpc/examples/golang v0.0.0-20250507132354-a884a0b8bbb7
 	github.com/stretchr/testify v1.10.0
-	github.com/zeromicro/go-zero v1.8.3
+	github.com/zeromicro/go-zero v1.8.4
 	go.uber.org/zap v1.24.0
 	google.golang.org/grpc v1.67.1
 	google.golang.org/protobuf v1.36.5
@@ -28,6 +28,8 @@ require (
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/grafana/pyroscope-go v1.2.2 // indirect
+	github.com/grafana/pyroscope-go/godeltaprof v0.1.8 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.20.0 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect

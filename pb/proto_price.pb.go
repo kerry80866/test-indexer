@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.6
 // 	protoc        v5.29.3
-// source: price.proto
+// source: proto_price.proto
 
 package pb
 
@@ -33,7 +33,7 @@ type GetPriceHistoryRequest struct {
 
 func (x *GetPriceHistoryRequest) Reset() {
 	*x = GetPriceHistoryRequest{}
-	mi := &file_price_proto_msgTypes[0]
+	mi := &file_proto_price_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -45,7 +45,7 @@ func (x *GetPriceHistoryRequest) String() string {
 func (*GetPriceHistoryRequest) ProtoMessage() {}
 
 func (x *GetPriceHistoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_price_proto_msgTypes[0]
+	mi := &file_proto_price_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -58,7 +58,7 @@ func (x *GetPriceHistoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPriceHistoryRequest.ProtoReflect.Descriptor instead.
 func (*GetPriceHistoryRequest) Descriptor() ([]byte, []int) {
-	return file_price_proto_rawDescGZIP(), []int{0}
+	return file_proto_price_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *GetPriceHistoryRequest) GetChainId() int32 {
@@ -93,7 +93,7 @@ type TokenPricePoint struct {
 
 func (x *TokenPricePoint) Reset() {
 	*x = TokenPricePoint{}
-	mi := &file_price_proto_msgTypes[1]
+	mi := &file_proto_price_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -105,7 +105,7 @@ func (x *TokenPricePoint) String() string {
 func (*TokenPricePoint) ProtoMessage() {}
 
 func (x *TokenPricePoint) ProtoReflect() protoreflect.Message {
-	mi := &file_price_proto_msgTypes[1]
+	mi := &file_proto_price_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -118,7 +118,7 @@ func (x *TokenPricePoint) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TokenPricePoint.ProtoReflect.Descriptor instead.
 func (*TokenPricePoint) Descriptor() ([]byte, []int) {
-	return file_price_proto_rawDescGZIP(), []int{1}
+	return file_proto_price_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *TokenPricePoint) GetTimestamp() int64 {
@@ -145,7 +145,7 @@ type TokenPriceHistory struct {
 
 func (x *TokenPriceHistory) Reset() {
 	*x = TokenPriceHistory{}
-	mi := &file_price_proto_msgTypes[2]
+	mi := &file_proto_price_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -157,7 +157,7 @@ func (x *TokenPriceHistory) String() string {
 func (*TokenPriceHistory) ProtoMessage() {}
 
 func (x *TokenPriceHistory) ProtoReflect() protoreflect.Message {
-	mi := &file_price_proto_msgTypes[2]
+	mi := &file_proto_price_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -170,7 +170,7 @@ func (x *TokenPriceHistory) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TokenPriceHistory.ProtoReflect.Descriptor instead.
 func (*TokenPriceHistory) Descriptor() ([]byte, []int) {
-	return file_price_proto_rawDescGZIP(), []int{2}
+	return file_proto_price_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *TokenPriceHistory) GetPoints() []*TokenPricePoint {
@@ -190,7 +190,7 @@ type GetPriceHistoryResponse struct {
 
 func (x *GetPriceHistoryResponse) Reset() {
 	*x = GetPriceHistoryResponse{}
-	mi := &file_price_proto_msgTypes[3]
+	mi := &file_proto_price_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -202,7 +202,7 @@ func (x *GetPriceHistoryResponse) String() string {
 func (*GetPriceHistoryResponse) ProtoMessage() {}
 
 func (x *GetPriceHistoryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_price_proto_msgTypes[3]
+	mi := &file_proto_price_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -215,7 +215,7 @@ func (x *GetPriceHistoryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPriceHistoryResponse.ProtoReflect.Descriptor instead.
 func (*GetPriceHistoryResponse) Descriptor() ([]byte, []int) {
-	return file_price_proto_rawDescGZIP(), []int{3}
+	return file_proto_price_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *GetPriceHistoryResponse) GetPrices() map[string]*TokenPriceHistory {
@@ -225,11 +225,11 @@ func (x *GetPriceHistoryResponse) GetPrices() map[string]*TokenPriceHistory {
 	return nil
 }
 
-var File_price_proto protoreflect.FileDescriptor
+var File_proto_price_proto protoreflect.FileDescriptor
 
-const file_price_proto_rawDesc = "" +
+const file_proto_price_proto_rawDesc = "" +
 	"\n" +
-	"\vprice.proto\x12\x05price\"\x80\x01\n" +
+	"\x11proto_price.proto\x12\x05quote\"\x80\x01\n" +
 	"\x16GetPriceHistoryRequest\x12\x18\n" +
 	"\achainId\x18\x01 \x01(\x05R\achainId\x12&\n" +
 	"\x0etokenAddresses\x18\x02 \x03(\tR\x0etokenAddresses\x12$\n" +
@@ -238,41 +238,41 @@ const file_price_proto_rawDesc = "" +
 	"\ttimestamp\x18\x01 \x01(\x03R\ttimestamp\x12\x1a\n" +
 	"\bpriceUsd\x18\x02 \x01(\x01R\bpriceUsd\"C\n" +
 	"\x11TokenPriceHistory\x12.\n" +
-	"\x06points\x18\x01 \x03(\v2\x16.price.TokenPricePointR\x06points\"\xb2\x01\n" +
+	"\x06points\x18\x01 \x03(\v2\x16.quote.TokenPricePointR\x06points\"\xb2\x01\n" +
 	"\x17GetPriceHistoryResponse\x12B\n" +
-	"\x06prices\x18\x01 \x03(\v2*.price.GetPriceHistoryResponse.PricesEntryR\x06prices\x1aS\n" +
+	"\x06prices\x18\x01 \x03(\v2*.quote.GetPriceHistoryResponse.PricesEntryR\x06prices\x1aS\n" +
 	"\vPricesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12.\n" +
-	"\x05value\x18\x02 \x01(\v2\x18.price.TokenPriceHistoryR\x05value:\x028\x012`\n" +
+	"\x05value\x18\x02 \x01(\v2\x18.quote.TokenPriceHistoryR\x05value:\x028\x012`\n" +
 	"\fPriceService\x12P\n" +
-	"\x0fGetPriceHistory\x12\x1d.price.GetPriceHistoryRequest\x1a\x1e.price.GetPriceHistoryResponseB\x17Z\x15dex-indexer-sol/pb;pbb\x06proto3"
+	"\x0fGetPriceHistory\x12\x1d.quote.GetPriceHistoryRequest\x1a\x1e.quote.GetPriceHistoryResponseB\x15Z\x13dex-quote-svc/pb;pbb\x06proto3"
 
 var (
-	file_price_proto_rawDescOnce sync.Once
-	file_price_proto_rawDescData []byte
+	file_proto_price_proto_rawDescOnce sync.Once
+	file_proto_price_proto_rawDescData []byte
 )
 
-func file_price_proto_rawDescGZIP() []byte {
-	file_price_proto_rawDescOnce.Do(func() {
-		file_price_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_price_proto_rawDesc), len(file_price_proto_rawDesc)))
+func file_proto_price_proto_rawDescGZIP() []byte {
+	file_proto_price_proto_rawDescOnce.Do(func() {
+		file_proto_price_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_price_proto_rawDesc), len(file_proto_price_proto_rawDesc)))
 	})
-	return file_price_proto_rawDescData
+	return file_proto_price_proto_rawDescData
 }
 
-var file_price_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
-var file_price_proto_goTypes = []any{
-	(*GetPriceHistoryRequest)(nil),  // 0: price.GetPriceHistoryRequest
-	(*TokenPricePoint)(nil),         // 1: price.TokenPricePoint
-	(*TokenPriceHistory)(nil),       // 2: price.TokenPriceHistory
-	(*GetPriceHistoryResponse)(nil), // 3: price.GetPriceHistoryResponse
-	nil,                             // 4: price.GetPriceHistoryResponse.PricesEntry
+var file_proto_price_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_proto_price_proto_goTypes = []any{
+	(*GetPriceHistoryRequest)(nil),  // 0: quote.GetPriceHistoryRequest
+	(*TokenPricePoint)(nil),         // 1: quote.TokenPricePoint
+	(*TokenPriceHistory)(nil),       // 2: quote.TokenPriceHistory
+	(*GetPriceHistoryResponse)(nil), // 3: quote.GetPriceHistoryResponse
+	nil,                             // 4: quote.GetPriceHistoryResponse.PricesEntry
 }
-var file_price_proto_depIdxs = []int32{
-	1, // 0: price.TokenPriceHistory.points:type_name -> price.TokenPricePoint
-	4, // 1: price.GetPriceHistoryResponse.prices:type_name -> price.GetPriceHistoryResponse.PricesEntry
-	2, // 2: price.GetPriceHistoryResponse.PricesEntry.value:type_name -> price.TokenPriceHistory
-	0, // 3: price.PriceService.GetPriceHistory:input_type -> price.GetPriceHistoryRequest
-	3, // 4: price.PriceService.GetPriceHistory:output_type -> price.GetPriceHistoryResponse
+var file_proto_price_proto_depIdxs = []int32{
+	1, // 0: quote.TokenPriceHistory.points:type_name -> quote.TokenPricePoint
+	4, // 1: quote.GetPriceHistoryResponse.prices:type_name -> quote.GetPriceHistoryResponse.PricesEntry
+	2, // 2: quote.GetPriceHistoryResponse.PricesEntry.value:type_name -> quote.TokenPriceHistory
+	0, // 3: quote.PriceService.GetPriceHistory:input_type -> quote.GetPriceHistoryRequest
+	3, // 4: quote.PriceService.GetPriceHistory:output_type -> quote.GetPriceHistoryResponse
 	4, // [4:5] is the sub-list for method output_type
 	3, // [3:4] is the sub-list for method input_type
 	3, // [3:3] is the sub-list for extension type_name
@@ -280,26 +280,26 @@ var file_price_proto_depIdxs = []int32{
 	0, // [0:3] is the sub-list for field type_name
 }
 
-func init() { file_price_proto_init() }
-func file_price_proto_init() {
-	if File_price_proto != nil {
+func init() { file_proto_price_proto_init() }
+func file_proto_price_proto_init() {
+	if File_proto_price_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_price_proto_rawDesc), len(file_price_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_price_proto_rawDesc), len(file_proto_price_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_price_proto_goTypes,
-		DependencyIndexes: file_price_proto_depIdxs,
-		MessageInfos:      file_price_proto_msgTypes,
+		GoTypes:           file_proto_price_proto_goTypes,
+		DependencyIndexes: file_proto_price_proto_depIdxs,
+		MessageInfos:      file_proto_price_proto_msgTypes,
 	}.Build()
-	File_price_proto = out.File
-	file_price_proto_goTypes = nil
-	file_price_proto_depIdxs = nil
+	File_proto_price_proto = out.File
+	file_proto_price_proto_goTypes = nil
+	file_proto_price_proto_depIdxs = nil
 }

@@ -5,6 +5,7 @@ import (
 	"dex-indexer-sol/internal/config"
 	"dex-indexer-sol/internal/pkg/logger"
 	"dex-indexer-sol/internal/pkg/types"
+	"dex-indexer-sol/internal/tools"
 	"dex-indexer-sol/pb"
 	"fmt"
 	"time"
@@ -121,7 +122,7 @@ func (ps *PriceSyncService) fetchPriceHistory() (map[string][]cache.TokenPricePo
 
 	result := make(map[string][]cache.TokenPricePoint)
 	for tokenAddr, history := range resp.Prices {
-		var points []cache.TokenPricePoint
+		points := make([]cache.TokenPricePoint, 0, len(history.Points))
 		for _, p := range history.Points {
 			points = append(points, cache.TokenPricePoint{
 				Timestamp: p.Timestamp,

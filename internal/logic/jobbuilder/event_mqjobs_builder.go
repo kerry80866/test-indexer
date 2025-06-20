@@ -1,6 +1,7 @@
-package dispatcher
+package jobbuilder
 
 import (
+	"dex-indexer-sol/internal/consts"
 	"dex-indexer-sol/internal/logic/core"
 	"dex-indexer-sol/internal/pkg/mq"
 	"dex-indexer-sol/internal/pkg/utils"
@@ -11,6 +12,7 @@ import (
 // 每个 KafkaJob 对应一个分区，封装若干个事件（pb.Events）。
 func BuildEventKafkaJobs(
 	txCtx *core.TxContext,
+	quotePrices []*pb.TokenPrice,
 	source int32,
 	topic string,
 	partitions int,
@@ -69,7 +71,15 @@ func BuildEventKafkaJobs(
 			jobs = append(jobs, &mq.KafkaJob{
 				Topic:     topic,
 				Partition: int32(pid),
-				Msg:       buildEventsProto(txCtx, list, source),
+				Msg: &pb.Events{
+					Version:     1,
+					ChainId:     consts.ChainIDSolana,
+					Slot:        txCtx.Slot,
+					Source:      source,
+					Events:      list,
+					BlockHash:   txCtx.BlockHash[:],
+					QuotePrices: quotePrices,
+				},
 			})
 		}
 	}

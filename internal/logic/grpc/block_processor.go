@@ -1,11 +1,13 @@
 package grpc
 
 import (
+	"bytes"
 	"context"
+	"dex-indexer-sol/internal/cache"
 	"dex-indexer-sol/internal/consts"
 	"dex-indexer-sol/internal/logic/core"
-	"dex-indexer-sol/internal/logic/dispatcher"
 	"dex-indexer-sol/internal/logic/eventparser"
+	"dex-indexer-sol/internal/logic/jobbuilder"
 	"dex-indexer-sol/internal/logic/progress"
 	"dex-indexer-sol/internal/logic/txadapter"
 	"dex-indexer-sol/internal/pkg/mq"
@@ -13,6 +15,8 @@ import (
 	"dex-indexer-sol/internal/pkg/utils"
 	"dex-indexer-sol/internal/svc"
 	"dex-indexer-sol/internal/tools"
+	pb2 "dex-indexer-sol/pb"
+
 	"errors"
 	"sync/atomic"
 	"time"
@@ -31,6 +35,8 @@ type BlockProcessor struct {
 	activeSlotDispatch int64                         // 当前活跃的 slot dispatch goroutine 数（用于限流发事件 + 同步进度）
 	ctx                context.Context
 	cancel             func(err error)
+
+	lastBlockChanWarnTime int64
 }
 
 func NewBlockProcessor(sc *svc.GrpcServiceContext, blockChan chan *pb.SubscribeUpdateBlock) *BlockProcessor {
@@ -51,7 +57,11 @@ func (p *BlockProcessor) Start() {
 		case block := <-p.blockChan:
 			p.procBlock(block)
 			if len(p.blockChan) > 10 {
-				logger.Warnf("[BlockProcessor] block chan len:%v", len(p.blockChan))
+				now := time.Now().Unix()
+				if now-p.lastBlockChanWarnTime >= 10 {
+					p.lastBlockChanWarnTime = now
+					logger.Warnf("[BlockProcessor] block chan len: %v", len(p.blockChan))
+				}
 			}
 		}
 	}
@@ -104,10 +114,22 @@ func (p *BlockProcessor) procBlock(block *pb.SubscribeUpdateBlock) {
 		})
 	logger.Infof("[BlockProcessor] 事件解析耗时: %v", time.Since(parseStart))
 
-	// 4. 构建事件类 Kafka 任务
+	// 4. 更新价格缓存，并补全 USD 估值
+	usdStart := time.Now()
+	p.updatePriceCacheFromEvents(results)                      // 更新 token 最新价格至 PriceCache
+	quotePrices := p.loadQuotePricesFromCache(txCtx.BlockTime) // 从 PriceCache 读取 quote token 价格（SOL/USDC/USDT）
+	if quotePrices == nil {
+		logger.Errorf("[BlockProcessor] 获取 quotePrices 失败, slot: %d", block.Slot)
+		return
+	}
+	fillUsdAmountForEvents(results, quotePrices) // 用 quotePrices 填充所有 TradeEvent 的 USD 金额
+	logger.Infof("[BlockProcessor] 补全 USD 估值完成, 耗时: %v", time.Since(usdStart))
+
+	// 5. 构建事件类 Kafka 任务
 	eventStart := time.Now()
-	eventJobs, eventCount, tradeCount, validTradeCount, transferCount := dispatcher.BuildEventKafkaJobs(
+	eventJobs, eventCount, tradeCount, validTradeCount, transferCount := jobbuilder.BuildEventKafkaJobs(
 		txCtx,
+		quotePrices,
 		sourceGrpc,
 		p.sc.Config.KafkaProducerConf.Topics.Event,
 		p.sc.Config.KafkaProducerConf.Partitions.Event,
@@ -117,10 +139,11 @@ func (p *BlockProcessor) procBlock(block *pb.SubscribeUpdateBlock) {
 	logger.Infof("[BlockProcessor] Kafka事件：事件 %d 条（trade %d，有效trade %d，transfer %d）, 耗时 %s",
 		eventCount, tradeCount, validTradeCount, transferCount, eventDuration)
 
-	// 5. 构建余额类 Kafka 任务
+	// 6. 构建余额类 Kafka 任务
 	balanceStart := time.Now()
-	balanceJobs, balanceCount := dispatcher.BuildBalanceKafkaJobs(
+	balanceJobs, balanceCount := jobbuilder.BuildBalanceKafkaJobs(
 		txCtx,
+		quotePrices,
 		sourceGrpc,
 		p.sc.Config.KafkaProducerConf.Topics.Balance,
 		p.sc.Config.KafkaProducerConf.Partitions.Balance,
@@ -129,12 +152,12 @@ func (p *BlockProcessor) procBlock(block *pb.SubscribeUpdateBlock) {
 	balanceDuration := time.Since(balanceStart)
 	logger.Infof("[BlockProcessor] Kafka余额事件：事件 %d 条, 耗时 %s", balanceCount, balanceDuration)
 
-	// 6. 合并 Kafka 任务
+	// 7. 合并 Kafka 任务
 	mqJobs := make([]*mq.KafkaJob, 0, len(eventJobs)+len(balanceJobs))
 	mqJobs = append(mqJobs, eventJobs...)
 	mqJobs = append(mqJobs, balanceJobs...)
 
-	// 7. 分发任务（Kafka 推送 + 写进度）
+	// 8. 分发任务（Kafka 推送 + 写进度）
 	dispatchStart := time.Now()
 	p.dispatchSlot(txCtx.Slot, txCtx.BlockTime, mqJobs)
 	logger.Infof("[BlockProcessor] 任务分发耗时: %v", time.Since(dispatchStart))
@@ -162,30 +185,11 @@ func (p *BlockProcessor) buildTxContext(block *pb.SubscribeUpdateBlock) *core.Tx
 			block.Slot, block.Blockhash, err)
 	}
 
-	// 从价格缓存中获取 quote token 价格，如果失败则跳过该 block
-	blockTime := block.BlockTime.Timestamp
-	prices, ok := p.sc.PriceCache.GetQuotePricesAt(tools.USDQuoteMints, blockTime)
-	if !ok {
-		logger.Errorf("[BlockProcessor] 获取 QuoteToken 价格失败，跳过该区块：slot=%d, blockTime=%d",
-			block.Slot, blockTime)
-		return nil
-	}
-
-	// 构建 quotesPrice 数组
-	quotesPrice := make([]core.QuotePrice, 0, len(prices))
-	for i, mint := range tools.USDQuoteMints {
-		quotesPrice = append(quotesPrice, core.QuotePrice{
-			Token:    mint,
-			PriceUsd: prices[i],
-		})
-	}
-
 	return &core.TxContext{
-		BlockTime:   blockTime,
-		Slot:        block.Slot,
-		BlockHash:   blockHash, // 若解析失败为零值
-		ParentSlot:  block.ParentSlot,
-		QuotesPrice: quotesPrice,
+		BlockTime:  block.BlockTime.Timestamp,
+		Slot:       block.Slot,
+		BlockHash:  blockHash, // 若解析失败为零值
+		ParentSlot: block.ParentSlot,
 	}
 }
 
@@ -195,10 +199,118 @@ func (p *BlockProcessor) parseTx(txCtx *core.TxContext, owners map[string]types.
 		return core.ParsedTxResult{}
 	}
 
-	events := eventparser.ExtractEventsFromTx(adaptedTx)
+	events, priceEvents := eventparser.ExtractEventsFromTx(adaptedTx)
 	return core.ParsedTxResult{
-		Balances: adaptedTx.Balances,
-		Events:   events,
+		Balances:    adaptedTx.Balances,
+		Events:      events,
+		PriceEvents: priceEvents,
+	}
+}
+
+// updatePriceCacheFromEvents 从事件中提取Token的价格，并写入 PriceCache。
+func (p *BlockProcessor) updatePriceCacheFromEvents(results []core.ParsedTxResult) {
+	latest := make(map[types.Pubkey]*core.PriceEvent)
+
+	// 遍历所有交易结果，保留每个 token 的最新价格事件（取 PublishTime 最大）
+	for _, result := range results {
+		for _, e := range result.PriceEvents {
+			old, ok := latest[e.TokenMint]
+			if !ok || e.PublishTime > old.PublishTime {
+				latest[e.TokenMint] = e
+			}
+		}
+	}
+
+	if len(latest) == 0 {
+		return
+	}
+
+	// 构建写入缓存的数据结构（Token → PricePoint）
+	points := make(map[types.Pubkey]cache.TokenPricePoint, len(latest))
+	for token, ev := range latest {
+		points[token] = cache.TokenPricePoint{
+			Timestamp: ev.PublishTime,
+			PriceUsd:  ev.PriceUsd,
+		}
+	}
+	p.sc.PriceCache.Insert(points)
+}
+
+// loadQuotePricesFromCache 从 PriceCache 拉取 quote token 的价格（含 SOL/WSOL/USDC/USDT）
+func (p *BlockProcessor) loadQuotePricesFromCache(blockTime int64) []*pb2.TokenPrice {
+	type quoteDef struct {
+		Mint     types.Pubkey
+		Decimals uint32
+	}
+
+	// 定义查询顺序和映射信息
+	defs := []quoteDef{
+		{Mint: consts.WSOLMint, Decimals: tools.WSOLDecimals},
+		{Mint: consts.USDCMint, Decimals: tools.USDCDecimals},
+		{Mint: consts.USDTMint, Decimals: tools.USDTDecimals},
+	}
+
+	// 提取价格
+	mints := make([]types.Pubkey, 0, len(defs))
+	for _, def := range defs {
+		mints = append(mints, def.Mint)
+	}
+
+	priceVals, ok := p.sc.PriceCache.GetQuotePricesAt(mints, blockTime)
+	if !ok {
+		return nil
+	}
+
+	result := make([]*pb2.TokenPrice, 0, len(defs)+1)
+	// NativeSOL 用 WSOL 价格
+	result = append(result, &pb2.TokenPrice{
+		Token:    consts.NativeSOLMint[:],
+		Decimals: tools.WSOLDecimals,
+		Price:    priceVals[0],
+	})
+	// 其余 quote token
+	for i, def := range defs {
+		result = append(result, &pb2.TokenPrice{
+			Token:    def.Mint[:],
+			Decimals: def.Decimals,
+			Price:    priceVals[i],
+		})
+	}
+	return result
+}
+
+// fillUsdAmountForEvents 补全每个 TradeEvent 的 USD 金额与单价信息（AmountUsd / PriceUsd）
+func fillUsdAmountForEvents(results []core.ParsedTxResult, quotePrices []*pb2.TokenPrice) {
+	for _, result := range results {
+		for _, e := range result.Events {
+			if e.EventType != uint32(pb2.EventType_TRADE_BUY) &&
+				e.EventType != uint32(pb2.EventType_TRADE_SELL) {
+				continue
+			}
+			trade := e.Event.GetTrade()
+			if trade == nil {
+				continue
+			}
+
+			var quoteUsd float64
+			for _, val := range quotePrices {
+				if bytes.Equal(trade.QuoteToken, val.Token) {
+					quoteUsd = val.Price
+					break
+				}
+			}
+			if quoteUsd == 0 {
+				continue
+			}
+
+			baseAmount := float64(trade.TokenAmount) / utils.Pow10(trade.TokenDecimals)
+			quoteAmount := float64(trade.QuoteTokenAmount) / utils.Pow10(trade.QuoteDecimals)
+
+			trade.AmountUsd = quoteAmount * quoteUsd
+			if baseAmount > 0 {
+				trade.PriceUsd = trade.AmountUsd / baseAmount
+			}
+		}
 	}
 }
 
@@ -217,7 +329,12 @@ func (p *BlockProcessor) dispatchSlot(slotID uint64, blockTime int64, jobs []*mq
 	}
 
 	go func() {
-		defer atomic.AddInt64(&p.activeSlotDispatch, -1)
+		defer func() {
+			if r := recover(); r != nil {
+				logger.Errorf("[BlockProcessor] dispatchSlot panic: %v", r)
+			}
+			atomic.AddInt64(&p.activeSlotDispatch, -1)
+		}()
 
 		timeout := time.Duration(p.sc.Config.TimeConf.SlotDispatchTimeoutMs) * time.Millisecond
 		ctx, cancel := context.WithTimeout(p.ctx, timeout)
@@ -244,7 +361,7 @@ func (p *BlockProcessor) dispatchSlot(slotID uint64, blockTime int64, jobs []*mq
 		}
 
 		if len(failedJobs) == 0 {
-			// ✅ Kafka 发送成功，写入进度
+			// Kafka 发送成功，写入进度
 			progressStartTime := time.Now()
 			if p.sc.ProgressManager != nil {
 				err := p.sc.ProgressManager.MarkSlotStatus(ctx, progress.SourceGrpc, slotID, blockTime, progress.SlotProcessed)
@@ -258,7 +375,7 @@ func (p *BlockProcessor) dispatchSlot(slotID uint64, blockTime int64, jobs []*mq
 			logger.Infof("[BlockProcessor] slot %d 处理完成 - 最大序列化耗时: %v, Kafka最大发送耗时: %v, 最大确认耗时: %v, 进度写入耗时: %v, 总耗时: %v（成功=%d）",
 				slotID, maxMarshalTime, maxSendTime, maxAckTime, progressTime, totalTime, successCount)
 		} else {
-			// ❌ Kafka 有失败，不写进度
+			// Kafka 有失败，不写进度
 			totalTime := time.Since(startTime)
 			logger.Errorf("[BlockProcessor] slot %d 处理失败 - 最大序列化耗时: %v, Kafka最大发送耗时: %v, 最大确认耗时: %v, 总耗时: %v（成功=%d 失败=%d）",
 				slotID, maxMarshalTime, maxSendTime, maxAckTime, totalTime, successCount, len(failedJobs))
