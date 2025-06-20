@@ -125,7 +125,7 @@ func (s *RpcPriceSyncService) fetchPriceAccounts() (map[types.Pubkey]cache.Token
 	if err != nil {
 		return nil, fmt.Errorf("GetMultipleAccounts failed: %w", err)
 	}
-	logger.Infof("[PriceSync] GetMultipleAccounts 成功, 账户数: %d, 耗时: %v", len(s.accounts), duration)
+	logger.Infof("[RpcPriceSyncService] GetMultipleAccounts 成功, 账户数: %d, 耗时: %v", len(s.accounts), duration)
 
 	if len(infos) != len(s.accounts) {
 		return nil, fmt.Errorf("返回账户数与请求不一致: got=%d want=%d", len(infos), len(s.accounts))
@@ -146,7 +146,7 @@ func (s *RpcPriceSyncService) fetchPriceAccounts() (map[types.Pubkey]cache.Token
 			logger.Warnf("[RpcPriceSyncService] 解析失败: token=%s account=%s err=%v", s.tokens[i], account, err)
 			continue
 		}
-		logger.Infof("[PriceSync] %s: %.6f (ts=%s)", token, priceInfo.PriceUsd, time.Unix(priceInfo.Timestamp, 0).Format("2006-01-02 15:04:05"))
+		logger.Infof("[RpcPriceSyncService] %s: %.6f (ts=%s)", token, priceInfo.PriceUsd, time.Unix(priceInfo.Timestamp, 0).Format("2006-01-02 15:04:05"))
 
 		// 反查 token mint（如 USDC）对应的 account 地址
 		result[token] = *priceInfo
