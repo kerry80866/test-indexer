@@ -16,6 +16,7 @@ import (
 	"dex-indexer-sol/internal/svc"
 	"dex-indexer-sol/internal/tools"
 	pb2 "dex-indexer-sol/pb"
+	"runtime"
 
 	"errors"
 	"sync/atomic"
@@ -31,6 +32,7 @@ const (
 	maxSlotDispatch = 200
 )
 
+// workerCount 用于事件并发解析，+2 是为了在高 CPU 占用场景下保留一定并发冗余
 var workerCount = consts.CpuCount + 2
 
 type BlockProcessor struct {
@@ -39,6 +41,7 @@ type BlockProcessor struct {
 	ctx       context.Context
 	cancel    func(err error)
 
+	startTime             time.Time
 	activeSlotDispatch    int64 // 当前活跃的 slot dispatch goroutine 数（用于限流发事件 + 同步进度）
 	lastBlockChanWarnTime int64
 }
@@ -54,6 +57,7 @@ func NewBlockProcessor(sc *svc.GrpcServiceContext, blockChan chan *pb.SubscribeU
 }
 
 func (p *BlockProcessor) Start() {
+	p.startTime = time.Now()
 	for {
 		select {
 		case <-p.ctx.Done():
@@ -383,6 +387,17 @@ func (p *BlockProcessor) dispatchSlot(slotID uint64, blockTime int64, jobs []*mq
 			totalTime := time.Since(startTime)
 			logger.Errorf("[BlockProcessor] slot %d 处理失败 - 最大序列化耗时: %v, Kafka最大发送耗时: %v, 最大确认耗时: %v, 总耗时: %v（成功=%d 失败=%d）",
 				slotID, maxMarshalTime, maxSendTime, maxAckTime, totalTime, successCount, len(failedJobs))
+		}
+
+		// 主动触发 GC：在系统空闲时回收内存，降低长期运行的内存占用，提升稳定性。
+		// 触发条件：
+		// - 当前区块处理较快（耗时 < 250ms），表示系统处理压力不高；
+		// - blockChan 当前为空，说明暂时无区块待处理（空闲状态）；
+		// - 系统运行时间超过 30 秒，跳过冷启动阶段 ；
+		elapsed := time.Since(startTime)
+		if len(p.blockChan) == 0 && elapsed < 250*time.Millisecond && time.Since(p.startTime) > 30*time.Second {
+			logger.Debugf("[BlockProcessor] 主动触发 GC, 空闲处理耗时: %v", elapsed)
+			runtime.GC()
 		}
 	}()
 }

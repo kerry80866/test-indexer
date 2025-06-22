@@ -41,7 +41,7 @@ time_conf:
 
 # Kafka 生产者配置
 kafka_producer:
-  brokers: "127.0.0.1:9092"            # Kafka 服务器地址，多个地址用逗号分隔
+  brokers: "172.19.32.50:9092:9092"            # Kafka 服务器地址，多个地址用逗号分隔
   batch_size: 32768                    # 批处理大小（32KB）
   linger_ms: 5                         # 批处理延迟（毫秒）,多久刷新一次 Send 缓存
   topics:
