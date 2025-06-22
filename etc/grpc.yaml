@@ -1,3 +1,7 @@
+# 监控服务配置
+monitor:
+  port: 8371            # 监控服务监听端口，0 表示关闭
+
 # 日志配置
 logger:
   format: "json"        # 日志格式，开发环境建议使用 "console"，生产环境建议使用 "json"
@@ -9,6 +13,7 @@ logger:
 grpc:
   endpoint: damp-red-needle.solana-mainnet.quiknode.pro:10000   # gRPC 服务端地址
   x_token:               # 认证用的 x-token
+  rpc_endpoint: https://damp-red-needle.solana-mainnet.quiknode.pro/ # RPC endpoint，用于 SlotChecker 等模块
   stream_ping_interval_sec: 20         # Stream 心跳包发送间隔（秒）
   keepalive_ping_interval_sec: 12      # gRPC 底层 keepalive 间隔（秒）
   keepalive_ping_timeout_sec: 4        # gRPC 底层 keepalive 超时（秒）
@@ -36,7 +41,7 @@ time_conf:
 
 # Kafka 生产者配置
 kafka_producer:
-  brokers: "172.19.32.50:9092"         # Kafka 服务器地址，多个地址用逗号分隔
+  brokers: "127.0.0.1:9092"            # Kafka 服务器地址，多个地址用逗号分隔
   batch_size: 32768                    # 批处理大小（32KB）
   linger_ms: 5                         # 批处理延迟（毫秒）,多久刷新一次 Send 缓存
   topics:

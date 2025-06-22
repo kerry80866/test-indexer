@@ -47,31 +47,15 @@ func ExtractCreatePoolEvent(
 		return nil
 	}
 
-	if layout.TokenProgram1Index >= 0 && !tools.IsSPLTokenProgram(ix.Accounts[layout.TokenProgram1Index]) {
+	if layout.TokenProgram1Index >= 0 && !tools.IsSPLTokenPubkey(ix.Accounts[layout.TokenProgram1Index]) {
 		logger.Errorf("[%s:%s] invalid TokenProgram1: %s, tx=%s",
 			dexName, instructionName, ix.Accounts[layout.TokenProgram1Index], ctx.TxHashString())
 		return nil
 	}
-	if layout.TokenProgram2Index >= 0 && !tools.IsSPLTokenProgram(ix.Accounts[layout.TokenProgram2Index]) {
+	if layout.TokenProgram2Index >= 0 && !tools.IsSPLTokenPubkey(ix.Accounts[layout.TokenProgram2Index]) {
 		logger.Errorf("[%s:%s] invalid TokenProgram2: %s, tx=%s",
 			dexName, instructionName, ix.Accounts[layout.TokenProgram2Index], ctx.TxHashString())
 		return nil
-	}
-
-	event := pb.LiquidityEvent{
-		Type:             pb.EventType_CREATE_POOL,
-		EventId:          core.BuildEventID(ctx.Slot, ctx.TxIndex, ix.IxIndex, ix.InnerIndex),
-		Slot:             ctx.Slot,
-		BlockTime:        ctx.BlockTime,
-		TxHash:           ctx.TxHash[:],
-		Signers:          ctx.Signers,
-		Dex:              uint32(dex),
-		UserWallet:       ix.Accounts[layout.UserWalletIndex][:],
-		PairAddress:      ix.Accounts[layout.PoolAddressIndex][:],
-		TokenAmount:      0,
-		QuoteTokenAmount: 0,
-		UserTokenBalance: 0,
-		UserQuoteBalance: 0,
 	}
 
 	quote, ok := tools.ChooseQuote(tokenMint1, tokenMint2)
@@ -79,37 +63,57 @@ func ExtractCreatePoolEvent(
 		quote = tokenMint2
 	}
 
-	if quote == tokenMint2 {
-		event.Token = tokenMint1[:]
-		event.QuoteToken = tokenMint2[:]
-		event.TokenDecimals = uint32(bal1.Decimals)
-		event.QuoteDecimals = uint32(bal2.Decimals)
-		event.TokenAccount = poolVault1[:]
-		event.QuoteTokenAccount = poolVault2[:]
-		event.TokenAccountOwner = bal1.PostOwner[:]
-		event.QuoteTokenAccountOwner = bal2.PostOwner[:]
-		event.PairTokenBalance = bal1.PostBalance
-		event.PairQuoteBalance = bal2.PostBalance
+	var (
+		baseToken, quoteToken types.Pubkey
+		balBase, balQuote     *core.TokenBalance
+		vaultBase, vaultQuote types.Pubkey
+	)
+
+	if quote == tokenMint1 {
+		baseToken, quoteToken = tokenMint2, tokenMint1
+		balBase, balQuote = bal2, bal1
+		vaultBase, vaultQuote = poolVault2, poolVault1
 	} else {
-		event.Token = tokenMint2[:]
-		event.QuoteToken = tokenMint1[:]
-		event.TokenDecimals = uint32(bal2.Decimals)
-		event.QuoteDecimals = uint32(bal1.Decimals)
-		event.TokenAccount = poolVault2[:]
-		event.QuoteTokenAccount = poolVault1[:]
-		event.TokenAccountOwner = bal2.PostOwner[:]
-		event.QuoteTokenAccountOwner = bal1.PostOwner[:]
-		event.PairTokenBalance = bal2.PostBalance
-		event.PairQuoteBalance = bal1.PostBalance
+		baseToken, quoteToken = tokenMint1, tokenMint2
+		balBase, balQuote = bal1, bal2
+		vaultBase, vaultQuote = poolVault1, poolVault2
+	}
+
+	liquidity := &pb.LiquidityEvent{
+		Type:                   pb.EventType_CREATE_POOL,
+		EventId:                core.BuildEventID(ctx.Slot, ctx.TxIndex, ix.IxIndex, ix.InnerIndex),
+		Slot:                   ctx.Slot,
+		BlockTime:              ctx.BlockTime,
+		TxHash:                 ctx.TxHash[:],
+		Signers:                ctx.Signers,
+		UserWallet:             ix.Accounts[layout.UserWalletIndex][:],
+		TokenDecimals:          uint32(balBase.Decimals),
+		QuoteDecimals:          uint32(balQuote.Decimals),
+		Dex:                    uint32(dex),
+		TokenAmount:            0,
+		QuoteTokenAmount:       0,
+		Token:                  baseToken[:],
+		QuoteToken:             quoteToken[:],
+		PairAddress:            ix.Accounts[layout.PoolAddressIndex][:],
+		TokenAccount:           vaultBase[:],
+		QuoteTokenAccount:      vaultQuote[:],
+		TokenAccountOwner:      balBase.PostOwner[:],
+		QuoteTokenAccountOwner: balQuote.PostOwner[:],
+		PairTokenBalance:       balBase.PostBalance,
+		PairQuoteBalance:       balQuote.PostBalance,
+		UserTokenBalance:       0,
+		UserQuoteBalance:       0,
+		TokenProgram:           tools.TokenProgramTypeOf(balBase.TokenProgramID),
+		QuoteTokenProgram:      tools.TokenProgramTypeOf(balQuote.TokenProgramID),
 	}
 
 	return &core.Event{
-		ID:        event.EventId,
-		EventType: uint32(event.Type),
-		Key:       event.PairAddress,
+		ID:        liquidity.EventId,
+		EventType: uint32(liquidity.Type),
+		Key:       liquidity.PairAddress,
 		Event: &pb.Event{
 			Event: &pb.Event_Liquidity{
-				Liquidity: &event,
+				Liquidity: liquidity,
 			},
 		},
 	}

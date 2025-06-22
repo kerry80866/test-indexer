@@ -44,7 +44,7 @@ func extractSwapEvent(
 		PoolToken2AccountIndex: 8,
 	}, 0)
 	if result == nil {
-		logger.Errorf("[PumpfunAMM:extractSwapEvent] 转账结构缺失: tx=%s, ix=%d, inner=%d",
+		logger.Infof("[PumpfunAMM:extractSwapEvent] 转账结构缺失: tx=%s, ix=%d, inner=%d",
 			ctx.TxHashString(), ix.IxIndex, ix.InnerIndex)
 		return -1
 	}

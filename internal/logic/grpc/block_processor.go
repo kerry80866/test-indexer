@@ -26,16 +26,20 @@ import (
 	pb "github.com/rpcpool/yellowstone-grpc/examples/golang/proto"
 )
 
-const maxSlotDispatch = 200
-const sourceGrpc = 1
+const (
+	sourceGrpc      = 1
+	maxSlotDispatch = 200
+)
+
+var workerCount = consts.CpuCount + 2
 
 type BlockProcessor struct {
-	sc                 *svc.GrpcServiceContext
-	blockChan          chan *pb.SubscribeUpdateBlock // 接收 block 的 channel
-	activeSlotDispatch int64                         // 当前活跃的 slot dispatch goroutine 数（用于限流发事件 + 同步进度）
-	ctx                context.Context
-	cancel             func(err error)
+	sc        *svc.GrpcServiceContext
+	blockChan chan *pb.SubscribeUpdateBlock // 接收 block 的 channel
+	ctx       context.Context
+	cancel    func(err error)
 
+	activeSlotDispatch    int64 // 当前活跃的 slot dispatch goroutine 数（用于限流发事件 + 同步进度）
 	lastBlockChanWarnTime int64
 }
 
@@ -104,13 +108,13 @@ func (p *BlockProcessor) procBlock(block *pb.SubscribeUpdateBlock) {
 	parseStart := time.Now()
 	results := utils.ParallelMap(
 		validTxs,
-		consts.CpuCount+2,
-		func() map[string]types.Pubkey {
+		workerCount,
+		func(workerID int) map[string]types.Pubkey {
 			// 每个 goroutine 共享独立 owner cache map，提高解析效率。
-			return make(map[string]types.Pubkey, len(validTxs)*3/consts.CpuCount)
+			return make(map[string]types.Pubkey, len(validTxs)*4/consts.CpuCount)
 		},
-		func(owners map[string]types.Pubkey, tx *pb.SubscribeUpdateTransactionInfo) core.ParsedTxResult {
-			return p.parseTx(txCtx, owners, tx)
+		func(ownerCache map[string]types.Pubkey, tx *pb.SubscribeUpdateTransactionInfo) core.ParsedTxResult {
+			return p.parseTx(txCtx, ownerCache, tx)
 		})
 	logger.Infof("[BlockProcessor] 事件解析耗时: %v", time.Since(parseStart))
 
@@ -193,8 +197,8 @@ func (p *BlockProcessor) buildTxContext(block *pb.SubscribeUpdateBlock) *core.Tx
 	}
 }
 
-func (p *BlockProcessor) parseTx(txCtx *core.TxContext, owners map[string]types.Pubkey, tx *pb.SubscribeUpdateTransactionInfo) core.ParsedTxResult {
-	adaptedTx, err := txadapter.AdaptGrpcTx(txCtx, owners, tx)
+func (p *BlockProcessor) parseTx(txCtx *core.TxContext, ownerCache map[string]types.Pubkey, tx *pb.SubscribeUpdateTransactionInfo) core.ParsedTxResult {
+	adaptedTx, err := txadapter.AdaptGrpcTx(txCtx, ownerCache, tx)
 	if err != nil {
 		return core.ParsedTxResult{}
 	}

@@ -77,7 +77,7 @@ func extractMigrateEvent(
 	eventIndex := findEventInstruction(instrs, current, ix.Accounts[22]) // Event Authority
 	if eventIndex < 0 {
 		// 加上预期 EventAuthority
-		logger.Errorf("[Pumpfun:Migrate] 未找到事件日志指令: authority=%s, tx=%s", ix.Accounts[22], ctx.TxHashString())
+		logger.Infof("[Pumpfun:Migrate] 未找到事件日志指令: authority=%s, tx=%s", ix.Accounts[22], ctx.TxHashString())
 		return -1
 	}
 	eventIx := instrs[eventIndex]
@@ -106,7 +106,7 @@ func extractMigrateEvent(
 	}
 
 	// 6. 校验 Token Program 是否为 SPL Token
-	if !tools.IsSPLTokenProgram(ix.Accounts[7]) {
+	if !tools.IsSPLTokenPubkey(ix.Accounts[7]) {
 		logger.Errorf("[Pumpfun:Migrate] Token Program 非 SPL 标准程序: got=%s, tx=%s", ix.Accounts[7], ctx.TxHashString())
 		return -1
 	}

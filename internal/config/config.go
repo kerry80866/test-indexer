@@ -5,6 +5,10 @@ import (
 	"dex-indexer-sol/internal/pkg/mq"
 )
 
+type MonitorConfig struct {
+	Port int `json:"port"` // 监控端口，0 表示关闭
+}
+
 type LogConfig struct {
 	Format   string `yaml:"format"`   // 日志格式，支持 "console" 或 "json"
 	LogDir   string `yaml:"log_dir"`  // 日志目录（可为相对路径或绝对路径）
@@ -68,6 +72,7 @@ type TimeConfig struct {
 
 // GrpcConfig 是主配置结构体，用于驱动索引器服务
 type GrpcConfig struct {
+	Monitor           MonitorConfig       `json:"monitor"`        // 监控配置
 	LogConf           LogConfig           `yaml:"logger"`         // 日志配置
 	PriceServiceConf  PriceServiceConfig  `yaml:"price_service"`  // 价格服务配置
 	KafkaProducerConf KafkaProducerConfig `yaml:"kafka_producer"` // Kafka 生产者配置
@@ -81,8 +86,9 @@ type GrpcConfig struct {
 
 	// gRPC 客户端连接相关配置
 	Grpc struct {
-		Endpoint string `yaml:"endpoint"` // gRPC 服务端地址
-		XToken   string `yaml:"x_token"`  // x-token 认证
+		Endpoint    string `yaml:"endpoint"`     // gRPC 服务端地址
+		XToken      string `yaml:"x_token"`      // x-token 认证
+		RpcEndpoint string `yaml:"rpc_endpoint"` // RPC endpoint，用于 SlotChecker 等模块
 
 		// 应用级逻辑心跳（ping）配置
 		StreamPingIntervalSec int `yaml:"stream_ping_interval_sec"` // 应用层 ping 心跳间隔（秒）

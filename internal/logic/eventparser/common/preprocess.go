@@ -1,17 +1,17 @@
 package common
 
 import (
-	"dex-indexer-sol/internal/consts"
 	"dex-indexer-sol/internal/logic/core"
 	"dex-indexer-sol/internal/pkg/logger"
 	"dex-indexer-sol/internal/pkg/types"
+	"dex-indexer-sol/internal/tools"
 	sdktoken "github.com/blocto/solana-go-sdk/program/token"
 )
 
 // PreScanInitAccountBalances 扫描指令列表中 InitializeAccount 系指令，并尝试补充 ctx.Balances 信息。
 func PreScanInitAccountBalances(ctx *ParserContext, instrs []*core.AdaptedInstruction) {
 	for _, ix := range instrs {
-		if ix.ProgramID != consts.TokenProgram && ix.ProgramID != consts.TokenProgram2022 {
+		if !tools.IsSPLTokenPubkey(ix.ProgramID) {
 			continue
 		}
 		if len(ix.Data) == 0 {
@@ -99,16 +99,16 @@ func tryFillBalanceFromInitAccount(ctx *ParserContext, ix *core.AdaptedInstructi
 		return
 	}
 
-	innerIndex := uint16(len(ctx.Balances))
 	ctx.Balances[tokenAccount] = &core.TokenBalance{
-		Decimals:     decimals,
-		HasPreOwner:  false,
-		TxIndex:      uint16(ctx.TxIndex),
-		InnerIndex:   innerIndex,
-		TokenAccount: tokenAccount,
-		PreBalance:   0,
-		PostBalance:  0,
-		Token:        mint,
-		PostOwner:    owner,
+		Decimals:       decimals,
+		HasPreOwner:    false,
+		TxIndex:        uint16(ctx.TxIndex),
+		InnerIndex:     uint16(len(ctx.Balances)),
+		TokenAccount:   tokenAccount,
+		PreBalance:     0,
+		PostBalance:    0,
+		Token:          mint,
+		PostOwner:      owner,
+		TokenProgramID: ix.ProgramID,
 	}
 }

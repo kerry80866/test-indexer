@@ -6,6 +6,12 @@ func PartitionHashBytes(b []byte, mod uint32) uint32 {
 	if len(b) < 28 || mod <= 1 {
 		return 0
 	}
+	switch mod {
+	case 2, 4, 8, 16:
+		return uint32(b[27]) & (mod - 1) // 快速路径：低位掩码替代 hash + %
+	}
+
+	// fallback 路径：组合多个字节避免 hash 冲突
 	hash := uint32(b[7])<<24 | uint32(b[15])<<16 | uint32(b[19])<<8 | uint32(b[27])
 	return hash % mod
 }
@@ -14,10 +20,10 @@ func PartitionHashBytes(b []byte, mod uint32) uint32 {
 // 保底值由 minCap 保证，通常用于避免每个 bucket 初始容量太小。
 func CalcCapPerPartition(total, partitions, minCap int) int {
 	if partitions <= 1 {
-		return Max(total, minCap)
+		return max(total, minCap)
 	}
 	if partitions < 5 {
-		return Max(total/2, minCap)
+		return max(total/2, minCap)
 	}
-	return Max(total*3/partitions, minCap)
+	return max(total*3/partitions, minCap)
 }

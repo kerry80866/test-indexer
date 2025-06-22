@@ -20,7 +20,7 @@ type TaskResult struct {
 func ParallelMap[T any, R any, C any](
 	inputs []T,
 	workerNum int,
-	contextFactory func() C,
+	contextFactory func(workerID int) C,
 	fn func(ctx C, input T) R,
 ) []R {
 	inputLen := len(inputs)
@@ -31,7 +31,7 @@ func ParallelMap[T any, R any, C any](
 
 	// 单个元素时直接处理，避免并发开销
 	if inputLen == 1 {
-		return []R{fn(contextFactory(), inputs[0])}
+		return []R{fn(contextFactory(0), inputs[0])}
 	}
 
 	// 限制工作协程数量不超过输入元素数
@@ -52,9 +52,9 @@ func ParallelMap[T any, R any, C any](
 	// 启动工作协程
 	for i := 0; i < workerNum; i++ {
 		wg.Add(1)
-		go func() {
+		go func(id int) {
 			defer wg.Done()
-			ctx := contextFactory()
+			ctx := contextFactory(id)
 
 			// 循环处理输入通道中的任务
 			for in := range inputCh {
@@ -64,7 +64,7 @@ func ParallelMap[T any, R any, C any](
 					result R
 				}{in.index, result}
 			}
-		}()
+		}(i)
 	}
 
 	// 将输入数据发送到任务通道

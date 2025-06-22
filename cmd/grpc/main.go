@@ -6,6 +6,7 @@ import (
 	"dex-indexer-sol/internal/logic/grpc"
 	"dex-indexer-sol/internal/pkg/configloader"
 	"dex-indexer-sol/internal/pkg/logger"
+	"dex-indexer-sol/internal/pkg/monitor"
 	"dex-indexer-sol/internal/service"
 	"dex-indexer-sol/internal/svc"
 	"flag"
@@ -48,13 +49,14 @@ func main() {
 	// 初始化事件解析器模块：注册各协议的指令解析handler
 	eventparser.Init()
 
+	sg := zerosvc.NewServiceGroup()
+
 	// 初始化价格同步服务
 	priceSyncService, err := service.NewRpcPriceSyncService(&c.PriceServiceConf, serviceContext.PriceCache)
 	if err != nil {
 		panic(err)
 	}
 
-	sg := zerosvc.NewServiceGroup()
 	sg.Add(priceSyncService)
 
 	blockChan := make(chan *pb.SubscribeUpdateBlock, 200)
@@ -70,6 +72,11 @@ func main() {
 	sg.Add(blockProcessor)
 
 	logger.Info("Starting grpc stream service")
+
+	if c.Monitor.Port > 0 {
+		monitorServer := monitor.NewMonitorServer(c.Monitor.Port)
+		sg.Add(monitorServer)
+	}
 
 	// 启动服务
 	sg.Start()

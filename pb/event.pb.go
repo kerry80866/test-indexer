@@ -85,6 +85,55 @@ func (DexType) EnumDescriptor() ([]byte, []int) {
 	return file_event_proto_rawDescGZIP(), []int{0}
 }
 
+type TokenProgramType int32
+
+const (
+	TokenProgramType_TOKEN_OTHER TokenProgramType = 0 // 非 SPL / 2022 的其它自定义 Token 程序
+	TokenProgramType_TOKEN_SPL   TokenProgramType = 1
+	TokenProgramType_TOKEN_2022  TokenProgramType = 2
+)
+
+// Enum value maps for TokenProgramType.
+var (
+	TokenProgramType_name = map[int32]string{
+		0: "TOKEN_OTHER",
+		1: "TOKEN_SPL",
+		2: "TOKEN_2022",
+	}
+	TokenProgramType_value = map[string]int32{
+		"TOKEN_OTHER": 0,
+		"TOKEN_SPL":   1,
+		"TOKEN_2022":  2,
+	}
+)
+
+func (x TokenProgramType) Enum() *TokenProgramType {
+	p := new(TokenProgramType)
+	*p = x
+	return p
+}
+
+func (x TokenProgramType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (TokenProgramType) Descriptor() protoreflect.EnumDescriptor {
+	return file_event_proto_enumTypes[1].Descriptor()
+}
+
+func (TokenProgramType) Type() protoreflect.EnumType {
+	return &file_event_proto_enumTypes[1]
+}
+
+func (x TokenProgramType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use TokenProgramType.Descriptor instead.
+func (TokenProgramType) EnumDescriptor() ([]byte, []int) {
+	return file_event_proto_rawDescGZIP(), []int{1}
+}
+
 // 枚举定义：统一的事件类型标识
 type EventType int32
 
@@ -151,11 +200,11 @@ func (x EventType) String() string {
 }
 
 func (EventType) Descriptor() protoreflect.EnumDescriptor {
-	return file_event_proto_enumTypes[1].Descriptor()
+	return file_event_proto_enumTypes[2].Descriptor()
 }
 
 func (EventType) Type() protoreflect.EnumType {
-	return &file_event_proto_enumTypes[1]
+	return &file_event_proto_enumTypes[2]
 }
 
 func (x EventType) Number() protoreflect.EnumNumber {
@@ -164,7 +213,7 @@ func (x EventType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use EventType.Descriptor instead.
 func (EventType) EnumDescriptor() ([]byte, []int) {
-	return file_event_proto_rawDescGZIP(), []int{1}
+	return file_event_proto_rawDescGZIP(), []int{2}
 }
 
 // slot级别的事件数组（封装一个 slot 的全部事件）
@@ -881,29 +930,31 @@ func (x *TransferEvent) GetDestTokenBalance() uint64 {
 // 添加/移除流动性事件（token统一表示base token）
 type LiquidityEvent struct {
 	state                  protoimpl.MessageState `protogen:"open.v1"`
-	Type                   EventType              `protobuf:"varint,1,opt,name=type,proto3,enum=pb.EventType" json:"type,omitempty"`                                                     // 事件类型，如 AddLiquidity、RemoveLiquidity 等
-	EventId                uint64                 `protobuf:"varint,2,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`                                                  // 事件唯一ID（slot << 32 | tx_index << 16 | ix_index << 8 | inner_index）
-	Slot                   uint64                 `protobuf:"varint,3,opt,name=slot,proto3" json:"slot,omitempty"`                                                                       // 区块 Slot 高度
-	BlockTime              int64                  `protobuf:"varint,4,opt,name=block_time,json=blockTime,proto3" json:"block_time,omitempty"`                                            // 区块时间戳（秒级）
-	TxHash                 []byte                 `protobuf:"bytes,5,opt,name=tx_hash,json=txHash,proto3" json:"tx_hash,omitempty"`                                                      // 交易哈希
-	Signers                [][]byte               `protobuf:"bytes,6,rep,name=signers,proto3" json:"signers,omitempty"`                                                                  // 签名者地址列表（通常为交易的发起者们）
-	UserWallet             []byte                 `protobuf:"bytes,7,opt,name=user_wallet,json=userWallet,proto3" json:"user_wallet,omitempty"`                                          // 用户钱包地址（通常与 signers 一致）
-	TokenDecimals          uint32                 `protobuf:"varint,8,opt,name=token_decimals,json=tokenDecimals,proto3" json:"token_decimals,omitempty"`                                // token（即 base token）的精度
-	QuoteDecimals          uint32                 `protobuf:"varint,9,opt,name=quote_decimals,json=quoteDecimals,proto3" json:"quote_decimals,omitempty"`                                // quote token 的精度
-	Dex                    uint32                 `protobuf:"varint,10,opt,name=dex,proto3" json:"dex,omitempty"`                                                                        // 所属 DEX 平台编号（例如 RaydiumV4 = 1）
-	TokenAmount            uint64                 `protobuf:"varint,11,opt,name=token_amount,json=tokenAmount,proto3" json:"token_amount,omitempty"`                                     // token 添加/移除的数量（base token）
-	QuoteTokenAmount       uint64                 `protobuf:"varint,12,opt,name=quote_token_amount,json=quoteTokenAmount,proto3" json:"quote_token_amount,omitempty"`                    // quote token 添加/移除的数量
-	Token                  []byte                 `protobuf:"bytes,13,opt,name=token,proto3" json:"token,omitempty"`                                                                     // token 的 mint 地址（base token）
-	QuoteToken             []byte                 `protobuf:"bytes,14,opt,name=quote_token,json=quoteToken,proto3" json:"quote_token,omitempty"`                                         // quote token 的 mint 地址
-	PairAddress            []byte                 `protobuf:"bytes,15,opt,name=pair_address,json=pairAddress,proto3" json:"pair_address,omitempty"`                                      // 池子地址（如 AMM 池或交易对地址）
-	TokenAccount           []byte                 `protobuf:"bytes,16,opt,name=token_account,json=tokenAccount,proto3" json:"token_account,omitempty"`                                   // 池子中 token 的账户地址
-	QuoteTokenAccount      []byte                 `protobuf:"bytes,17,opt,name=quote_token_account,json=quoteTokenAccount,proto3" json:"quote_token_account,omitempty"`                  // 池子中 quote token 的账户地址
-	TokenAccountOwner      []byte                 `protobuf:"bytes,18,opt,name=token_account_owner,json=tokenAccountOwner,proto3" json:"token_account_owner,omitempty"`                  // 池子 token 账户的所有者
-	QuoteTokenAccountOwner []byte                 `protobuf:"bytes,19,opt,name=quote_token_account_owner,json=quoteTokenAccountOwner,proto3" json:"quote_token_account_owner,omitempty"` // 池子 quote token 账户的所有者
-	PairTokenBalance       uint64                 `protobuf:"varint,20,opt,name=pair_token_balance,json=pairTokenBalance,proto3" json:"pair_token_balance,omitempty"`                    // 当前池子中 token 的余额（base token）
-	PairQuoteBalance       uint64                 `protobuf:"varint,21,opt,name=pair_quote_balance,json=pairQuoteBalance,proto3" json:"pair_quote_balance,omitempty"`                    // 当前池子中 quote token 的余额
-	UserTokenBalance       uint64                 `protobuf:"varint,22,opt,name=user_token_balance,json=userTokenBalance,proto3" json:"user_token_balance,omitempty"`                    // 用户 token 的余额（base token）
-	UserQuoteBalance       uint64                 `protobuf:"varint,23,opt,name=user_quote_balance,json=userQuoteBalance,proto3" json:"user_quote_balance,omitempty"`                    // 用户 quote token 的余额
+	Type                   EventType              `protobuf:"varint,1,opt,name=type,proto3,enum=pb.EventType" json:"type,omitempty"`                                                              // 事件类型，如 AddLiquidity、RemoveLiquidity 等
+	EventId                uint64                 `protobuf:"varint,2,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`                                                           // 事件唯一ID（slot << 32 | tx_index << 16 | ix_index << 8 | inner_index）
+	Slot                   uint64                 `protobuf:"varint,3,opt,name=slot,proto3" json:"slot,omitempty"`                                                                                // 区块 Slot 高度
+	BlockTime              int64                  `protobuf:"varint,4,opt,name=block_time,json=blockTime,proto3" json:"block_time,omitempty"`                                                     // 区块时间戳（秒级）
+	TxHash                 []byte                 `protobuf:"bytes,5,opt,name=tx_hash,json=txHash,proto3" json:"tx_hash,omitempty"`                                                               // 交易哈希
+	Signers                [][]byte               `protobuf:"bytes,6,rep,name=signers,proto3" json:"signers,omitempty"`                                                                           // 签名者地址列表（通常为交易的发起者们）
+	UserWallet             []byte                 `protobuf:"bytes,7,opt,name=user_wallet,json=userWallet,proto3" json:"user_wallet,omitempty"`                                                   // 用户钱包地址（通常与 signers 一致）
+	TokenDecimals          uint32                 `protobuf:"varint,8,opt,name=token_decimals,json=tokenDecimals,proto3" json:"token_decimals,omitempty"`                                         // token（即 base token）的精度
+	QuoteDecimals          uint32                 `protobuf:"varint,9,opt,name=quote_decimals,json=quoteDecimals,proto3" json:"quote_decimals,omitempty"`                                         // quote token 的精度
+	Dex                    uint32                 `protobuf:"varint,10,opt,name=dex,proto3" json:"dex,omitempty"`                                                                                 // 所属 DEX 平台编号（例如 RaydiumV4 = 1）
+	TokenAmount            uint64                 `protobuf:"varint,11,opt,name=token_amount,json=tokenAmount,proto3" json:"token_amount,omitempty"`                                              // token 添加/移除的数量（base token）
+	QuoteTokenAmount       uint64                 `protobuf:"varint,12,opt,name=quote_token_amount,json=quoteTokenAmount,proto3" json:"quote_token_amount,omitempty"`                             // quote token 添加/移除的数量
+	Token                  []byte                 `protobuf:"bytes,13,opt,name=token,proto3" json:"token,omitempty"`                                                                              // token 的 mint 地址（base token）
+	QuoteToken             []byte                 `protobuf:"bytes,14,opt,name=quote_token,json=quoteToken,proto3" json:"quote_token,omitempty"`                                                  // quote token 的 mint 地址
+	PairAddress            []byte                 `protobuf:"bytes,15,opt,name=pair_address,json=pairAddress,proto3" json:"pair_address,omitempty"`                                               // 池子地址（如 AMM 池或交易对地址）
+	TokenAccount           []byte                 `protobuf:"bytes,16,opt,name=token_account,json=tokenAccount,proto3" json:"token_account,omitempty"`                                            // 池子中 token 的账户地址
+	QuoteTokenAccount      []byte                 `protobuf:"bytes,17,opt,name=quote_token_account,json=quoteTokenAccount,proto3" json:"quote_token_account,omitempty"`                           // 池子中 quote token 的账户地址
+	TokenAccountOwner      []byte                 `protobuf:"bytes,18,opt,name=token_account_owner,json=tokenAccountOwner,proto3" json:"token_account_owner,omitempty"`                           // 池子 token 账户的所有者
+	QuoteTokenAccountOwner []byte                 `protobuf:"bytes,19,opt,name=quote_token_account_owner,json=quoteTokenAccountOwner,proto3" json:"quote_token_account_owner,omitempty"`          // 池子 quote token 账户的所有者
+	PairTokenBalance       uint64                 `protobuf:"varint,20,opt,name=pair_token_balance,json=pairTokenBalance,proto3" json:"pair_token_balance,omitempty"`                             // 当前池子中 token 的余额（base token）
+	PairQuoteBalance       uint64                 `protobuf:"varint,21,opt,name=pair_quote_balance,json=pairQuoteBalance,proto3" json:"pair_quote_balance,omitempty"`                             // 当前池子中 quote token 的余额
+	UserTokenBalance       uint64                 `protobuf:"varint,22,opt,name=user_token_balance,json=userTokenBalance,proto3" json:"user_token_balance,omitempty"`                             // 用户 token 的余额（base token）
+	UserQuoteBalance       uint64                 `protobuf:"varint,23,opt,name=user_quote_balance,json=userQuoteBalance,proto3" json:"user_quote_balance,omitempty"`                             // 用户 quote token 的余额
+	TokenProgram           TokenProgramType       `protobuf:"varint,24,opt,name=token_program,json=tokenProgram,proto3,enum=pb.TokenProgramType" json:"token_program,omitempty"`                  // base token 的程序类型（SPL 或 Token-2022）
+	QuoteTokenProgram      TokenProgramType       `protobuf:"varint,25,opt,name=quote_token_program,json=quoteTokenProgram,proto3,enum=pb.TokenProgramType" json:"quote_token_program,omitempty"` // quote token 的程序类型（SPL 或 Token-2022）
 	unknownFields          protoimpl.UnknownFields
 	sizeCache              protoimpl.SizeCache
 }
@@ -1097,6 +1148,20 @@ func (x *LiquidityEvent) GetUserQuoteBalance() uint64 {
 		return x.UserQuoteBalance
 	}
 	return 0
+}
+
+func (x *LiquidityEvent) GetTokenProgram() TokenProgramType {
+	if x != nil {
+		return x.TokenProgram
+	}
+	return TokenProgramType_TOKEN_OTHER
+}
+
+func (x *LiquidityEvent) GetQuoteTokenProgram() TokenProgramType {
+	if x != nil {
+		return x.QuoteTokenProgram
+	}
+	return TokenProgramType_TOKEN_OTHER
 }
 
 // 铸币事件
@@ -1776,22 +1841,23 @@ func (x *MigrateEvent) GetDestPairQuoteBalance() uint64 {
 
 type LaunchpadTokenEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Type          EventType              `protobuf:"varint,1,opt,name=type,proto3,enum=pb.EventType" json:"type,omitempty"`                 // 事件类型（LAUNCH_TOKEN）
-	EventId       uint64                 `protobuf:"varint,2,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`              // 事件唯一 ID
-	Slot          uint64                 `protobuf:"varint,3,opt,name=slot,proto3" json:"slot,omitempty"`                                   // 区块高度
-	BlockTime     int64                  `protobuf:"varint,4,opt,name=block_time,json=blockTime,proto3" json:"block_time,omitempty"`        // 区块时间戳（秒）
-	TxHash        []byte                 `protobuf:"bytes,5,opt,name=tx_hash,json=txHash,proto3" json:"tx_hash,omitempty"`                  // 交易哈希
-	Signers       [][]byte               `protobuf:"bytes,6,rep,name=signers,proto3" json:"signers,omitempty"`                              // 签名者地址列表
-	UserWallet    []byte                 `protobuf:"bytes,7,opt,name=user_wallet,json=userWallet,proto3" json:"user_wallet,omitempty"`      // 用户地址
-	Creator       []byte                 `protobuf:"bytes,8,opt,name=creator,proto3" json:"creator,omitempty"`                              // 创建者地址（token creator）
-	Decimals      uint32                 `protobuf:"varint,9,opt,name=decimals,proto3" json:"decimals,omitempty"`                           // 精度
-	Dex           uint32                 `protobuf:"varint,10,opt,name=dex,proto3" json:"dex,omitempty"`                                    // 来源 DEX 编号（如 Pump.fun = 4）
-	TotalSupply   uint64                 `protobuf:"varint,11,opt,name=total_supply,json=totalSupply,proto3" json:"total_supply,omitempty"` // 初始总发行量
-	Token         []byte                 `protobuf:"bytes,12,opt,name=token,proto3" json:"token,omitempty"`                                 // token address
-	PairAddress   []byte                 `protobuf:"bytes,13,opt,name=pair_address,json=pairAddress,proto3" json:"pair_address,omitempty"`  // 初始交易池地址（可选）
-	Symbol        string                 `protobuf:"bytes,14,opt,name=symbol,proto3" json:"symbol,omitempty"`                               // 符号（如 WEN）
-	Name          string                 `protobuf:"bytes,15,opt,name=name,proto3" json:"name,omitempty"`                                   // 名称
-	Uri           string                 `protobuf:"bytes,16,opt,name=uri,proto3" json:"uri,omitempty"`                                     // 元数据 URI
+	Type          EventType              `protobuf:"varint,1,opt,name=type,proto3,enum=pb.EventType" json:"type,omitempty"`                                             // 事件类型（LAUNCH_TOKEN）
+	EventId       uint64                 `protobuf:"varint,2,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`                                          // 事件唯一 ID
+	Slot          uint64                 `protobuf:"varint,3,opt,name=slot,proto3" json:"slot,omitempty"`                                                               // 区块高度
+	BlockTime     int64                  `protobuf:"varint,4,opt,name=block_time,json=blockTime,proto3" json:"block_time,omitempty"`                                    // 区块时间戳（秒）
+	TxHash        []byte                 `protobuf:"bytes,5,opt,name=tx_hash,json=txHash,proto3" json:"tx_hash,omitempty"`                                              // 交易哈希
+	Signers       [][]byte               `protobuf:"bytes,6,rep,name=signers,proto3" json:"signers,omitempty"`                                                          // 签名者地址列表
+	UserWallet    []byte                 `protobuf:"bytes,7,opt,name=user_wallet,json=userWallet,proto3" json:"user_wallet,omitempty"`                                  // 用户地址
+	Creator       []byte                 `protobuf:"bytes,8,opt,name=creator,proto3" json:"creator,omitempty"`                                                          // 创建者地址（token creator）
+	Decimals      uint32                 `protobuf:"varint,9,opt,name=decimals,proto3" json:"decimals,omitempty"`                                                       // 精度
+	Dex           uint32                 `protobuf:"varint,10,opt,name=dex,proto3" json:"dex,omitempty"`                                                                // 来源 DEX 编号（如 Pump.fun = 4）
+	TotalSupply   uint64                 `protobuf:"varint,11,opt,name=total_supply,json=totalSupply,proto3" json:"total_supply,omitempty"`                             // 初始总发行量
+	Token         []byte                 `protobuf:"bytes,12,opt,name=token,proto3" json:"token,omitempty"`                                                             // token address
+	PairAddress   []byte                 `protobuf:"bytes,13,opt,name=pair_address,json=pairAddress,proto3" json:"pair_address,omitempty"`                              // 初始交易池地址（可选）
+	Symbol        string                 `protobuf:"bytes,14,opt,name=symbol,proto3" json:"symbol,omitempty"`                                                           // 符号（如 WEN）
+	Name          string                 `protobuf:"bytes,15,opt,name=name,proto3" json:"name,omitempty"`                                                               // 名称
+	Uri           string                 `protobuf:"bytes,16,opt,name=uri,proto3" json:"uri,omitempty"`                                                                 // 元数据 URI
+	TokenProgram  TokenProgramType       `protobuf:"varint,17,opt,name=token_program,json=tokenProgram,proto3,enum=pb.TokenProgramType" json:"token_program,omitempty"` // token 的程序类型（SPL 或 Token-2022）
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1938,6 +2004,13 @@ func (x *LaunchpadTokenEvent) GetUri() string {
 	return ""
 }
 
+func (x *LaunchpadTokenEvent) GetTokenProgram() TokenProgramType {
+	if x != nil {
+		return x.TokenProgram
+	}
+	return TokenProgramType_TOKEN_OTHER
+}
+
 var File_event_proto protoreflect.FileDescriptor
 
 const file_event_proto_rawDesc = "" +
@@ -2017,7 +2090,7 @@ const file_event_proto_rawDesc = "" +
 	"\x06amount\x18\f \x01(\x04R\x06amount\x12\x1a\n" +
 	"\bdecimals\x18\r \x01(\rR\bdecimals\x12*\n" +
 	"\x11src_token_balance\x18\x0e \x01(\x04R\x0fsrcTokenBalance\x12,\n" +
-	"\x12dest_token_balance\x18\x0f \x01(\x04R\x10destTokenBalance\"\xd8\x06\n" +
+	"\x12dest_token_balance\x18\x0f \x01(\x04R\x10destTokenBalance\"\xd9\a\n" +
 	"\x0eLiquidityEvent\x12!\n" +
 	"\x04type\x18\x01 \x01(\x0e2\r.pb.EventTypeR\x04type\x12\x19\n" +
 	"\bevent_id\x18\x02 \x01(\x04R\aeventId\x12\x12\n" +
@@ -2045,7 +2118,9 @@ const file_event_proto_rawDesc = "" +
 	"\x12pair_token_balance\x18\x14 \x01(\x04R\x10pairTokenBalance\x12,\n" +
 	"\x12pair_quote_balance\x18\x15 \x01(\x04R\x10pairQuoteBalance\x12,\n" +
 	"\x12user_token_balance\x18\x16 \x01(\x04R\x10userTokenBalance\x12,\n" +
-	"\x12user_quote_balance\x18\x17 \x01(\x04R\x10userQuoteBalance\"\xee\x02\n" +
+	"\x12user_quote_balance\x18\x17 \x01(\x04R\x10userQuoteBalance\x129\n" +
+	"\rtoken_program\x18\x18 \x01(\x0e2\x14.pb.TokenProgramTypeR\ftokenProgram\x12D\n" +
+	"\x13quote_token_program\x18\x19 \x01(\x0e2\x14.pb.TokenProgramTypeR\x11quoteTokenProgram\"\xee\x02\n" +
 	"\vMintToEvent\x12!\n" +
 	"\x04type\x18\x01 \x01(\x0e2\r.pb.EventTypeR\x04type\x12\x19\n" +
 	"\bevent_id\x18\x02 \x01(\x04R\aeventId\x12\x12\n" +
@@ -2127,7 +2202,7 @@ const file_event_proto_rawDesc = "" +
 	"\x16src_pair_token_balance\x18\x1d \x01(\x04R\x13srcPairTokenBalance\x123\n" +
 	"\x16src_pair_quote_balance\x18\x1e \x01(\x04R\x13srcPairQuoteBalance\x125\n" +
 	"\x17dest_pair_token_balance\x18\x1f \x01(\x04R\x14destPairTokenBalance\x125\n" +
-	"\x17dest_pair_quote_balance\x18  \x01(\x04R\x14destPairQuoteBalance\"\xbc\x03\n" +
+	"\x17dest_pair_quote_balance\x18  \x01(\x04R\x14destPairQuoteBalance\"\xf7\x03\n" +
 	"\x13LaunchpadTokenEvent\x12!\n" +
 	"\x04type\x18\x01 \x01(\x0e2\r.pb.EventTypeR\x04type\x12\x19\n" +
 	"\bevent_id\x18\x02 \x01(\x04R\aeventId\x12\x12\n" +
@@ -2147,7 +2222,8 @@ const file_event_proto_rawDesc = "" +
 	"\fpair_address\x18\r \x01(\fR\vpairAddress\x12\x16\n" +
 	"\x06symbol\x18\x0e \x01(\tR\x06symbol\x12\x12\n" +
 	"\x04name\x18\x0f \x01(\tR\x04name\x12\x10\n" +
-	"\x03uri\x18\x10 \x01(\tR\x03uri*\xae\x01\n" +
+	"\x03uri\x18\x10 \x01(\tR\x03uri\x129\n" +
+	"\rtoken_program\x18\x11 \x01(\x0e2\x14.pb.TokenProgramTypeR\ftokenProgram*\xae\x01\n" +
 	"\aDexType\x12\x0f\n" +
 	"\vDEX_UNKNOWN\x10\x00\x12\x12\n" +
 	"\x0eDEX_RAYDIUM_V4\x10\x01\x12\x14\n" +
@@ -2156,7 +2232,12 @@ const file_event_proto_rawDesc = "" +
 	"\vDEX_PUMPFUN\x10\x04\x12\x14\n" +
 	"\x10DEX_RAYDIUM_CPMM\x10\x05\x12\x14\n" +
 	"\x10DEX_METEORA_DLMM\x10\x06\x12\x16\n" +
-	"\x12DEX_ORCA_WHIRLPOOL\x10\a*\xdf\x01\n" +
+	"\x12DEX_ORCA_WHIRLPOOL\x10\a*B\n" +
+	"\x10TokenProgramType\x12\x0f\n" +
+	"\vTOKEN_OTHER\x10\x00\x12\r\n" +
+	"\tTOKEN_SPL\x10\x01\x12\x0e\n" +
+	"\n" +
+	"TOKEN_2022\x10\x02*\xdf\x01\n" +
 	"\tEventType\x12\v\n" +
 	"\aUNKNOWN\x10\x00\x12\r\n" +
 	"\tTRADE_BUY\x10\x01\x12\x0e\n" +
@@ -2186,47 +2267,51 @@ func file_event_proto_rawDescGZIP() []byte {
 	return file_event_proto_rawDescData
 }
 
-var file_event_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_event_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
 var file_event_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_event_proto_goTypes = []any{
 	(DexType)(0),                // 0: pb.DexType
-	(EventType)(0),              // 1: pb.EventType
-	(*Events)(nil),              // 2: pb.Events
-	(*TokenPrice)(nil),          // 3: pb.TokenPrice
-	(*Event)(nil),               // 4: pb.Event
-	(*TradeEvent)(nil),          // 5: pb.TradeEvent
-	(*TransferEvent)(nil),       // 6: pb.TransferEvent
-	(*LiquidityEvent)(nil),      // 7: pb.LiquidityEvent
-	(*MintToEvent)(nil),         // 8: pb.MintToEvent
-	(*BurnEvent)(nil),           // 9: pb.BurnEvent
-	(*BalanceUpdateEvent)(nil),  // 10: pb.BalanceUpdateEvent
-	(*MigrateEvent)(nil),        // 11: pb.MigrateEvent
-	(*LaunchpadTokenEvent)(nil), // 12: pb.LaunchpadTokenEvent
+	(TokenProgramType)(0),       // 1: pb.TokenProgramType
+	(EventType)(0),              // 2: pb.EventType
+	(*Events)(nil),              // 3: pb.Events
+	(*TokenPrice)(nil),          // 4: pb.TokenPrice
+	(*Event)(nil),               // 5: pb.Event
+	(*TradeEvent)(nil),          // 6: pb.TradeEvent
+	(*TransferEvent)(nil),       // 7: pb.TransferEvent
+	(*LiquidityEvent)(nil),      // 8: pb.LiquidityEvent
+	(*MintToEvent)(nil),         // 9: pb.MintToEvent
+	(*BurnEvent)(nil),           // 10: pb.BurnEvent
+	(*BalanceUpdateEvent)(nil),  // 11: pb.BalanceUpdateEvent
+	(*MigrateEvent)(nil),        // 12: pb.MigrateEvent
+	(*LaunchpadTokenEvent)(nil), // 13: pb.LaunchpadTokenEvent
 }
 var file_event_proto_depIdxs = []int32{
-	4,  // 0: pb.Events.events:type_name -> pb.Event
-	3,  // 1: pb.Events.quote_prices:type_name -> pb.TokenPrice
-	5,  // 2: pb.Event.trade:type_name -> pb.TradeEvent
-	6,  // 3: pb.Event.transfer:type_name -> pb.TransferEvent
-	7,  // 4: pb.Event.liquidity:type_name -> pb.LiquidityEvent
-	8,  // 5: pb.Event.mint:type_name -> pb.MintToEvent
-	9,  // 6: pb.Event.burn:type_name -> pb.BurnEvent
-	10, // 7: pb.Event.balance:type_name -> pb.BalanceUpdateEvent
-	11, // 8: pb.Event.migrate:type_name -> pb.MigrateEvent
-	12, // 9: pb.Event.token:type_name -> pb.LaunchpadTokenEvent
-	1,  // 10: pb.TradeEvent.type:type_name -> pb.EventType
-	1,  // 11: pb.TransferEvent.type:type_name -> pb.EventType
-	1,  // 12: pb.LiquidityEvent.type:type_name -> pb.EventType
-	1,  // 13: pb.MintToEvent.type:type_name -> pb.EventType
-	1,  // 14: pb.BurnEvent.type:type_name -> pb.EventType
-	1,  // 15: pb.BalanceUpdateEvent.type:type_name -> pb.EventType
-	1,  // 16: pb.MigrateEvent.type:type_name -> pb.EventType
-	1,  // 17: pb.LaunchpadTokenEvent.type:type_name -> pb.EventType
-	18, // [18:18] is the sub-list for method output_type
-	18, // [18:18] is the sub-list for method input_type
-	18, // [18:18] is the sub-list for extension type_name
-	18, // [18:18] is the sub-list for extension extendee
-	0,  // [0:18] is the sub-list for field type_name
+	5,  // 0: pb.Events.events:type_name -> pb.Event
+	4,  // 1: pb.Events.quote_prices:type_name -> pb.TokenPrice
+	6,  // 2: pb.Event.trade:type_name -> pb.TradeEvent
+	7,  // 3: pb.Event.transfer:type_name -> pb.TransferEvent
+	8,  // 4: pb.Event.liquidity:type_name -> pb.LiquidityEvent
+	9,  // 5: pb.Event.mint:type_name -> pb.MintToEvent
+	10, // 6: pb.Event.burn:type_name -> pb.BurnEvent
+	11, // 7: pb.Event.balance:type_name -> pb.BalanceUpdateEvent
+	12, // 8: pb.Event.migrate:type_name -> pb.MigrateEvent
+	13, // 9: pb.Event.token:type_name -> pb.LaunchpadTokenEvent
+	2,  // 10: pb.TradeEvent.type:type_name -> pb.EventType
+	2,  // 11: pb.TransferEvent.type:type_name -> pb.EventType
+	2,  // 12: pb.LiquidityEvent.type:type_name -> pb.EventType
+	1,  // 13: pb.LiquidityEvent.token_program:type_name -> pb.TokenProgramType
+	1,  // 14: pb.LiquidityEvent.quote_token_program:type_name -> pb.TokenProgramType
+	2,  // 15: pb.MintToEvent.type:type_name -> pb.EventType
+	2,  // 16: pb.BurnEvent.type:type_name -> pb.EventType
+	2,  // 17: pb.BalanceUpdateEvent.type:type_name -> pb.EventType
+	2,  // 18: pb.MigrateEvent.type:type_name -> pb.EventType
+	2,  // 19: pb.LaunchpadTokenEvent.type:type_name -> pb.EventType
+	1,  // 20: pb.LaunchpadTokenEvent.token_program:type_name -> pb.TokenProgramType
+	21, // [21:21] is the sub-list for method output_type
+	21, // [21:21] is the sub-list for method input_type
+	21, // [21:21] is the sub-list for extension type_name
+	21, // [21:21] is the sub-list for extension extendee
+	0,  // [0:21] is the sub-list for field type_name
 }
 
 func init() { file_event_proto_init() }
@@ -2249,7 +2334,7 @@ func file_event_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_event_proto_rawDesc), len(file_event_proto_rawDesc)),
-			NumEnums:      2,
+			NumEnums:      3,
 			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   0,

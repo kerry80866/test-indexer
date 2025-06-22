@@ -36,16 +36,17 @@ type SolBalance struct {
 
 // TokenBalance 表示某个 SPL Token 账户在交易执行前后的余额信息。
 type TokenBalance struct {
-	Decimals     uint8
-	HasPreOwner  bool
-	TxIndex      uint16
-	InnerIndex   uint16
-	PreBalance   uint64 // 交易执行前余额（最小单位，例如 lamports）
-	PostBalance  uint64 // 交易执行后余额
-	TokenAccount types.Pubkey
-	Token        types.Pubkey
-	PreOwner     types.Pubkey
-	PostOwner    types.Pubkey
+	Decimals       uint8
+	HasPreOwner    bool
+	TxIndex        uint16
+	InnerIndex     uint16
+	PreBalance     uint64 // 交易执行前余额（最小单位，例如 lamports）
+	PostBalance    uint64 // 交易执行后余额
+	TokenAccount   types.Pubkey
+	Token          types.Pubkey
+	PreOwner       types.Pubkey
+	PostOwner      types.Pubkey
+	TokenProgramID types.Pubkey
 }
 
 // TokenDecimals 表示某 mint 的精度信息（通常用于解析金额）。
@@ -139,15 +140,16 @@ func (tx *AdaptedTx) AppendSolToTokenBalances(solBalance *SolBalance) {
 
 	// 写入包装后的 TokenBalance（模拟 SOL 作为 Token）
 	tx.Balances[account] = &TokenBalance{
-		Decimals:     9,
-		HasPreOwner:  true,
-		TxIndex:      solBalance.TxIndex,
-		InnerIndex:   0x100 | solBalance.InnerIndex, // 偏移标记，避免与真实 SPL 指令混淆
-		PreBalance:   solBalance.PreBalance,
-		PostBalance:  solBalance.PostBalance,
-		Token:        consts.NativeSOLMint,
-		TokenAccount: account,
-		PreOwner:     account,
-		PostOwner:    account,
+		Decimals:       9,
+		HasPreOwner:    true,
+		TxIndex:        solBalance.TxIndex,
+		InnerIndex:     0x100 | solBalance.InnerIndex, // 偏移标记，避免与真实 SPL 指令混淆
+		PreBalance:     solBalance.PreBalance,
+		PostBalance:    solBalance.PostBalance,
+		Token:          consts.NativeSOLMint,
+		TokenProgramID: consts.TokenProgram,
+		TokenAccount:   account,
+		PreOwner:       account,
+		PostOwner:      account,
 	}
 }

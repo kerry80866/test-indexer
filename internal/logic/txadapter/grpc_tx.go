@@ -95,7 +95,7 @@ func buildSolBalances(
 //   - balanceMap：token account → TokenBalance（含 mint、owner、pre/post 余额等）
 //   - tokenDecimals：当前交易中涉及的 mint → decimals（去重 + 有序）
 func buildBalances(
-	owners map[string]types.Pubkey,
+	ownerCache map[string]types.Pubkey,
 	tx *pb.SubscribeUpdateTransactionInfo,
 	accountKeys []types.Pubkey,
 ) (map[types.Pubkey]*core.TokenBalance, []core.TokenDecimals) {
@@ -112,54 +112,60 @@ func buildBalances(
 	mintResolver := newMintResolver(capacity)
 
 	// ownerResolver：用于将 base58 owner 地址解析为 Pubkey，并缓存解码结果。
-	ownerResolver := newOwnerResolver(owners)
+	ownerResolver := newOwnerResolver(ownerCache)
 
 	// 先处理 Post（代表账户最终状态），初始化结构，PreBalance 默认为 0
 	for i, post := range postList {
 		// 仅处理标准 SPL Token（TokenProgram / Token2022），跳过非标准模拟账户
-		if tools.IsSPLToken(post.ProgramId) {
-			account := accountKeys[post.AccountIndex]
-			decimals := uint8(post.UiTokenAmount.Decimals)
-			balanceMap[account] = &core.TokenBalance{
-				TokenAccount: account,
-				Token:        mintResolver.resolve(post.Mint, decimals),
-				PostBalance:  utils.ParseUint64(post.UiTokenAmount.Amount),
-				PostOwner:    ownerResolver.resolve(post.Owner),
-				Decimals:     decimals,
-				TxIndex:      uint16(tx.Index),
-				InnerIndex:   uint16(i),
-			}
+		if !tools.IsSPLTokenStr(post.ProgramId) {
+			continue
+		}
+
+		account := accountKeys[post.AccountIndex]
+		decimals := uint8(post.UiTokenAmount.Decimals)
+		balanceMap[account] = &core.TokenBalance{
+			TokenAccount:   account,
+			Token:          mintResolver.resolve(post.Mint, decimals),
+			PostBalance:    utils.ParseUint64(post.UiTokenAmount.Amount),
+			PostOwner:      ownerResolver.resolve(post.Owner),
+			Decimals:       decimals,
+			TokenProgramID: tools.ToTokenPubkey(post.ProgramId),
+			TxIndex:        uint16(tx.Index),
+			InnerIndex:     uint16(i),
 		}
 	}
 
 	// 再补充 Pre（如账户只出现在 Pre 中，说明可能被销毁）
-	newIndex := len(preList)
+	newIndex := len(postList)
 	for _, pre := range preList {
 		// 仅处理标准 SPL Token（TokenProgram / Token2022），跳过非标准模拟账户
-		if tools.IsSPLToken(pre.ProgramId) {
-			account := accountKeys[pre.AccountIndex]
+		if !tools.IsSPLTokenStr(pre.ProgramId) {
+			continue
+		}
+
+		account := accountKeys[pre.AccountIndex]
+		if tb, ok := balanceMap[account]; ok {
+			// 账户在 Post 中已存在，这里补充 PreBalance
+			tb.HasPreOwner = true
+			tb.PreOwner = ownerResolver.resolve(pre.Owner)
+			tb.PreBalance = utils.ParseUint64(pre.UiTokenAmount.Amount)
+		} else {
+			// Pre-only（如销毁账户），构造最小结构
+			decimals := uint8(pre.UiTokenAmount.Decimals)
 			owner := ownerResolver.resolve(pre.Owner)
-			if tb, ok := balanceMap[account]; ok {
-				// 账户在 Post 中已存在，这里补充 PreBalance
-				tb.HasPreOwner = true
-				tb.PreOwner = owner
-				tb.PreBalance = utils.ParseUint64(pre.UiTokenAmount.Amount)
-			} else {
-				// Pre-only（如销毁账户），构造最小结构
-				decimals := uint8(pre.UiTokenAmount.Decimals)
-				balanceMap[account] = &core.TokenBalance{
-					TokenAccount: account,
-					Token:        mintResolver.resolve(pre.Mint, decimals),
-					HasPreOwner:  true,
-					PreOwner:     owner,
-					PostOwner:    owner, // Pre-only 情况默认设置 PostOwner = PreOwner
-					PreBalance:   utils.ParseUint64(pre.UiTokenAmount.Amount),
-					Decimals:     decimals,
-					TxIndex:      uint16(tx.Index),
-					InnerIndex:   uint16(newIndex),
-				}
-				newIndex++
+			balanceMap[account] = &core.TokenBalance{
+				TokenAccount:   account,
+				Token:          mintResolver.resolve(pre.Mint, decimals),
+				HasPreOwner:    true,
+				PreOwner:       owner,
+				PostOwner:      owner, // Pre-only 情况默认设置 PostOwner = PreOwner
+				PreBalance:     utils.ParseUint64(pre.UiTokenAmount.Amount),
+				Decimals:       decimals,
+				TokenProgramID: tools.ToTokenPubkey(pre.ProgramId),
+				TxIndex:        uint16(tx.Index),
+				InnerIndex:     uint16(newIndex),
 			}
+			newIndex++
 		}
 	}
 
@@ -175,7 +181,7 @@ func buildInstructions(
 	rawInners := tx.Meta.InnerInstructions
 
 	// 预分配容量：假设每条主指令平均含有 2 条 inner 指令，最低保留 32 条，避免切片动态扩容
-	instructions := make([]*core.AdaptedInstruction, 0, utils.Max(len(rawInstructions)*2, 32))
+	instructions := make([]*core.AdaptedInstruction, 0, max(len(rawInstructions)*2, 32))
 	innerIndex := 0
 
 	for i, inst := range rawInstructions {
@@ -224,7 +230,11 @@ func buildInstructions(
 //  4. 返回 AdaptedTx；如 panic 会被 recover。
 //
 // owners：goroutine 私有的 Base58 → Pubkey 缓存，不会跨协程共享
-func AdaptGrpcTx(txCtx *core.TxContext, owners map[string]types.Pubkey, tx *pb.SubscribeUpdateTransactionInfo) (_ *core.AdaptedTx, err error) {
+func AdaptGrpcTx(
+	txCtx *core.TxContext,
+	ownerCache map[string]types.Pubkey,
+	tx *pb.SubscribeUpdateTransactionInfo,
+) (_ *core.AdaptedTx, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("AdaptGrpcTx panic: %v", r)
@@ -256,7 +266,7 @@ func AdaptGrpcTx(txCtx *core.TxContext, owners map[string]types.Pubkey, tx *pb.S
 	instructions := buildInstructions(tx, accountKeys)
 
 	// 解析 pre/post token 余额 + decimals 信息
-	balances, tokenDecimals := buildBalances(owners, tx, accountKeys)
+	balances, tokenDecimals := buildBalances(ownerCache, tx, accountKeys)
 
 	// 构造签名者列表：Solana 中交易前 N 个账户即为 signer
 	signers := make([][]byte, signerCount)

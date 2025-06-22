@@ -1,9 +1,9 @@
 package common
 
 import (
-	"dex-indexer-sol/internal/consts"
 	"dex-indexer-sol/internal/logic/core"
 	"dex-indexer-sol/internal/pkg/types"
+	"dex-indexer-sol/internal/tools"
 	sdktoken "github.com/blocto/solana-go-sdk/program/token"
 )
 
@@ -120,8 +120,7 @@ func FindAddLiquidityTransfers(
 		}
 
 		// 跳过空指令 / 非 Token Program
-		if len(ix.Data) == 0 ||
-			(ix.ProgramID != consts.TokenProgram && ix.ProgramID != consts.TokenProgram2022) {
+		if len(ix.Data) == 0 || !tools.IsSPLTokenPubkey(ix.ProgramID) {
 			continue
 		}
 
@@ -253,8 +252,7 @@ func FindRemoveLiquidityTransfers(
 		}
 
 		// 非 Token Program 指令直接跳过
-		if len(ix.Data) == 0 ||
-			(ix.ProgramID != consts.TokenProgram && ix.ProgramID != consts.TokenProgram2022) {
+		if len(ix.Data) == 0 || !tools.IsSPLTokenPubkey(ix.ProgramID) {
 			continue
 		}
 

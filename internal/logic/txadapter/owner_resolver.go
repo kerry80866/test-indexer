@@ -9,8 +9,8 @@ type ownerResolver struct {
 	owners map[string]types.Pubkey // 外部传入 + 协程私有，无需加锁
 }
 
-func newOwnerResolver(owners map[string]types.Pubkey) *ownerResolver {
-	return &ownerResolver{owners: owners}
+func newOwnerResolver(ownerCache map[string]types.Pubkey) *ownerResolver {
+	return &ownerResolver{owners: ownerCache}
 }
 
 // resolve 解码 base58 owner 字符串，命中则返回缓存值，否则解码后加入缓存。

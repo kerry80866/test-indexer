@@ -105,8 +105,9 @@ func extractCreateEvent(
 	}
 
 	// 6. 校验 Token Program 是否为 SPL Token
-	if !tools.IsSPLTokenProgram(ix.Accounts[9]) {
-		logger.Errorf("[Pumpfun:Create] Token Program 非 SPL 标准程序: got=%s, tx=%s", ix.Accounts[9], ctx.TxHashString())
+	tokenProgramID := ix.Accounts[9]
+	if !tools.IsSPLTokenPubkey(tokenProgramID) {
+		logger.Errorf("[Pumpfun:Create] Token Program 非 SPL 标准程序: got=%s, tx=%s", tokenProgramID, ctx.TxHashString())
 		return -1
 	}
 
@@ -174,6 +175,9 @@ func extractCreateEvent(
 
 		UserTokenBalance: 0,
 		UserQuoteBalance: creatorSolBalance,
+
+		TokenProgram:      tools.TokenProgramTypeOf(tokenProgramID),
+		QuoteTokenProgram: pb.TokenProgramType_TOKEN_SPL,
 	}
 
 	// 11. 将池子的 SOL 余额补充进 token balance 列表，便于后续统一处理
@@ -211,6 +215,8 @@ func extractCreateEvent(
 		Symbol: event.Symbol,
 		Name:   event.Name,
 		Uri:    event.Uri,
+
+		TokenProgram: tools.TokenProgramTypeOf(tokenProgramID),
 	}
 	launchpadTokenEvent := &core.Event{
 		ID:        tokenEvent.EventId,

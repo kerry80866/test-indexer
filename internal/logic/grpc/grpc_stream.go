@@ -35,6 +35,7 @@ type GrpcStreamManager struct {
 	recvTimeoutSec        int                           // gRPC Recv 超时时间（秒）
 	maxLatencyWarnMs      int                           // 区块延迟超 3 秒打 warning
 	maxLatencyDropMs      int                           // 区块延迟超 5 秒断流重连
+	slotChecker           *SlotChecker
 }
 
 func NewGrpcStreamManager(sc *svc.GrpcServiceContext, blockChan chan *pb.SubscribeUpdateBlock) (*GrpcStreamManager, error) {
@@ -80,10 +81,12 @@ func NewGrpcStreamManager(sc *svc.GrpcServiceContext, blockChan chan *pb.Subscri
 		sendTimeoutSec:        grpcConf.SendTimeoutSec,
 		maxLatencyWarnMs:      grpcConf.MaxLatencyWarnMs,
 		maxLatencyDropMs:      grpcConf.MaxLatencyDropMs,
+		slotChecker:           NewSlotChecker(grpcConf.RpcEndpoint),
 	}, nil
 }
 
 func (m *GrpcStreamManager) Start() {
+	m.slotChecker.Start()
 	m.mustConnect(0, 0)
 }
 
@@ -92,6 +95,8 @@ func (m *GrpcStreamManager) Stop() {
 	defer m.mu.Unlock()
 
 	m.stopped = true // 标记已停止，必须在 cancel 之前设置，防止重入
+
+	m.slotChecker.Stop()
 
 	// 先 cancel context，通知所有 goroutine 退出（如 pingLoop, blockRecvLoop）
 	if m.connCancel != nil {
@@ -244,7 +249,7 @@ func (m *GrpcStreamManager) blockRecvLoop(ctx context.Context) {
 			update, err := recvWithTimeout[*pb.SubscribeUpdate](ctx, m.stream.Recv, recvTimeout)
 			now := time.Now()
 			if err != nil {
-				logger.Errorf("[GrpcStream] Stream error: %v", err)
+				logger.Errorf("[GrpcStream] reconnecting, stream error: %v", err)
 				m.reconnect(lastBlockTime, lastSlot)
 				return
 			}
@@ -253,7 +258,7 @@ func (m *GrpcStreamManager) blockRecvLoop(ctx context.Context) {
 			case *pb.SubscribeUpdate_Block:
 				// 检查是否丢失slot
 				if lastSlot != 0 && u.Block.Slot != lastSlot+1 {
-					logger.Errorf("[GrpcStream] slot skipped: last slot = %d, current slot = %d", lastSlot, u.Block.Slot)
+					m.slotChecker.Submit(lastSlot, u.Block.Slot-1)
 				}
 				lastSlot = u.Block.Slot
 				lastBlockTime = u.Block.BlockTime.Timestamp * 1000
@@ -274,17 +279,17 @@ func (m *GrpcStreamManager) blockRecvLoop(ctx context.Context) {
 				//无论是否写入成功，都要更新 last
 				last = now
 				if interval > dropThreshold {
-					logger.Errorf("[GrpcStream] slot=%d, latency too high: %dms > %dms, reconnecting", u.Block.Slot, interval, dropThreshold)
+					logger.Errorf("[GrpcStream] reconnecting, slot=%d, latency too high: %dms > %dms", u.Block.Slot, interval, dropThreshold)
 					m.reconnect(lastBlockTime, lastSlot)
 					return
 				} else if interval > warnThreshold && lastSlot-lastWarnSlot >= warnSlotStep {
-					logger.Warnf("[GrpcStream] slot=%d, high latency: %dms > %dms", u.Block.Slot, interval, warnThreshold)
+					logger.Warnf("[GrpcStream] latency too high, slot=%d, latency: %dms > %dms", u.Block.Slot, interval, warnThreshold)
 					lastWarnSlot = lastSlot
 				}
 			}
 
 			if time.Since(last) > recvTimeout {
-				logger.Errorf("[GrpcStream] %v未收到block，触发重连", recvTimeout)
+				logger.Errorf("[GrpcStream] reconnecting, %v未收到block，触发重连", recvTimeout)
 				m.reconnect(lastBlockTime, lastSlot)
 				return
 			}

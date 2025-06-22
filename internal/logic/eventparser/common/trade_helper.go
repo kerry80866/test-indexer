@@ -1,8 +1,8 @@
 package common
 
 import (
-	"dex-indexer-sol/internal/consts"
 	"dex-indexer-sol/internal/logic/core"
+	"dex-indexer-sol/internal/tools"
 	sdktoken "github.com/blocto/solana-go-sdk/program/token"
 )
 
@@ -82,10 +82,10 @@ func FindSwapTransfersByIndex(
 		}
 
 		// 跳过空指令或非 Token Program 的指令
-		if len(ix.Data) == 0 ||
-			(ix.ProgramID != consts.TokenProgram && ix.ProgramID != consts.TokenProgram2022) {
+		if len(ix.Data) == 0 || !tools.IsSPLTokenPubkey(ix.ProgramID) {
 			continue
 		}
+
 		// 仅处理 Transfer 类型的指令
 		if ix.Data[0] != byte(sdktoken.InstructionTransfer) &&
 			ix.Data[0] != byte(sdktoken.InstructionTransferChecked) {

@@ -7,9 +7,41 @@ import (
 	"dex-indexer-sol/internal/pkg/types"
 	"dex-indexer-sol/internal/pkg/utils"
 	"dex-indexer-sol/pb"
+	"fmt"
 	"sort"
 	"sync"
 )
+
+const maxCapPerBucket = 4096
+const maxSafePartitions = 64
+
+var staticBuckets [][]*core.TokenBalance
+
+func reuseStaticBuckets(partitions int) [][]*core.TokenBalance {
+	if partitions > maxSafePartitions {
+		panic(fmt.Sprintf("too many partitions: %d > safe max=%d", partitions, maxSafePartitions))
+	}
+
+	if staticBuckets == nil {
+		staticBuckets = make([][]*core.TokenBalance, partitions)
+		for i := 0; i < partitions; i++ {
+			staticBuckets[i] = make([]*core.TokenBalance, 0, maxCapPerBucket)
+		}
+	} else {
+		// 扩容 bucket
+		if partitions > len(staticBuckets) {
+			for i := len(staticBuckets); i < partitions; i++ {
+				staticBuckets = append(staticBuckets, make([]*core.TokenBalance, 0, maxCapPerBucket))
+			}
+		}
+		// 清空已有 bucket
+		for i := 0; i < partitions; i++ {
+			staticBuckets[i] = staticBuckets[i][:0]
+		}
+	}
+
+	return staticBuckets[:partitions]
+}
 
 // BuildBalanceKafkaJobs 构造 TokenBalance 类型的 KafkaJob。
 // 每个 KafkaJob 对应一个分区，内部包含多个 BalanceUpdateEvent。
@@ -25,20 +57,8 @@ func BuildBalanceKafkaJobs(
 		partitions = 1
 	}
 
-	// 预估 balance 数量，按分区分配初始容量
-	total := 0
-	for _, res := range results {
-		total += len(res.Balances)
-	}
-	capacity := utils.CalcCapPerPartition(total, partitions, 10)
-
-	// 初始化分区数组
-	buckets := make([][]*core.TokenBalance, partitions)
-	for i := 0; i < partitions; i++ {
-		buckets[i] = make([]*core.TokenBalance, 0, capacity)
-	}
-
 	// 直接按 TokenAccount 分区，跳过清除逻辑
+	buckets := reuseStaticBuckets(partitions)
 	for _, res := range results {
 		for _, bal := range res.Balances {
 			if bal.PreBalance == 0 && bal.PostBalance == 0 {
@@ -92,16 +112,12 @@ func buildBalancePartitionJob(
 	// 合并同一个 TokenAccount 的记录，保留 TxIndex 最大的一条（即最新的一条）
 	merged := make(map[types.Pubkey]*core.TokenBalance, len(balances))
 	for _, bal := range balances {
-		exist := merged[bal.TokenAccount]
-		if exist == nil {
-			merged[bal.TokenAccount] = bal
+		key := bal.TokenAccount
+		if exist, ok := merged[key]; !ok {
+			merged[key] = bal
 		} else if exist.TxIndex < bal.TxIndex {
-			exist.TxIndex = bal.TxIndex
-			exist.InnerIndex = bal.InnerIndex
-			exist.Token = bal.Token
-			exist.PostOwner = bal.PostOwner
-			exist.PostBalance = bal.PostBalance
-			exist.Decimals = bal.Decimals
+			bal.PreBalance = exist.PreBalance // 仅污染 PreBalance
+			merged[key] = bal                 // 替换为更新版本
 		}
 	}
 

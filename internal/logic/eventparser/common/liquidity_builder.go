@@ -5,6 +5,7 @@ import (
 	"dex-indexer-sol/internal/logic/core"
 	"dex-indexer-sol/internal/pkg/logger"
 	"dex-indexer-sol/internal/pkg/types"
+	"dex-indexer-sol/internal/tools"
 	"dex-indexer-sol/pb"
 )
 
@@ -68,30 +69,47 @@ func buildBaseLiquidityEvent(
 		return nil
 	}
 
+	baseProgramType := determineTokenProgramType(ctx, baseTransfer)
+	quoteProgramType := determineTokenProgramType(ctx, quoteTransfer)
+	if baseProgramType == pb.TokenProgramType_TOKEN_OTHER || quoteProgramType == pb.TokenProgramType_TOKEN_OTHER {
+		logger.Errorf("[BuildLiquidityEvent] tx=%s: unknown token program type: base=%d, quote=%d",
+			ctx.TxHashString(), baseProgramType, quoteProgramType)
+		return nil
+	}
+
 	liquidity := &pb.LiquidityEvent{
-		Type:                   eventType,
-		EventId:                core.BuildEventID(ctx.Slot, ctx.TxIndex, ix.IxIndex, ix.InnerIndex),
-		Slot:                   ctx.Slot,
-		BlockTime:              ctx.BlockTime,
-		TxHash:                 ctx.TxHash[:],
-		Signers:                ctx.Signers,
-		Dex:                    uint32(dex),
-		UserWallet:             userWallet[:],
-		PairAddress:            poolAddress[:],
-		TokenDecimals:          uint32(baseTransfer.Decimals),
-		QuoteDecimals:          uint32(quoteTransfer.Decimals),
-		TokenAmount:            baseTransfer.Amount,
-		QuoteTokenAmount:       quoteTransfer.Amount,
-		Token:                  baseTransfer.Token[:],
-		QuoteToken:             quoteTransfer.Token[:],
+		// 基本信息
+		Type:        eventType,
+		EventId:     core.BuildEventID(ctx.Slot, ctx.TxIndex, ix.IxIndex, ix.InnerIndex),
+		Slot:        ctx.Slot,
+		BlockTime:   ctx.BlockTime,
+		TxHash:      ctx.TxHash[:],
+		Signers:     ctx.Signers,
+		Dex:         uint32(dex),
+		UserWallet:  userWallet[:],
+		PairAddress: poolAddress[:],
+
+		// Token 相关
+		Token:             baseTransfer.Token[:],
+		QuoteToken:        quoteTransfer.Token[:],
+		TokenDecimals:     uint32(baseTransfer.Decimals),
+		QuoteDecimals:     uint32(quoteTransfer.Decimals),
+		TokenProgram:      baseProgramType,
+		QuoteTokenProgram: quoteProgramType,
+
+		// 账户相关
 		TokenAccount:           baseTransfer.DestAccount[:],
 		QuoteTokenAccount:      quoteTransfer.DestAccount[:],
 		TokenAccountOwner:      baseTransfer.DestWallet[:],
 		QuoteTokenAccountOwner: quoteTransfer.DestWallet[:],
-		PairTokenBalance:       baseTransfer.DestPostBalance,
-		PairQuoteBalance:       quoteTransfer.DestPostBalance,
-		UserTokenBalance:       baseTransfer.SrcPostBalance,
-		UserQuoteBalance:       quoteTransfer.SrcPostBalance,
+
+		// 资产相关
+		TokenAmount:      baseTransfer.Amount,
+		QuoteTokenAmount: quoteTransfer.Amount,
+		PairTokenBalance: baseTransfer.DestPostBalance,
+		PairQuoteBalance: quoteTransfer.DestPostBalance,
+		UserTokenBalance: baseTransfer.SrcPostBalance,
+		UserQuoteBalance: quoteTransfer.SrcPostBalance,
 	}
 
 	// 若 Quote 为 WSOL 且为临时账户（余额为 0），用 SOL 余额补充 Quote 余额。
@@ -111,6 +129,18 @@ func buildBaseLiquidityEvent(
 			},
 		},
 	}
+}
+
+func determineTokenProgramType(ctx *ParserContext, transfer *ParsedTransfer) pb.TokenProgramType {
+	if bal, ok := ctx.Balances[transfer.SrcAccount]; ok {
+		return tools.TokenProgramTypeOf(bal.TokenProgramID)
+	} else if bal, ok := ctx.Balances[transfer.DestAccount]; ok {
+		return tools.TokenProgramTypeOf(bal.TokenProgramID)
+	}
+	logger.Errorf("[BuildLiquidityEvent] tx=%s: missing balance info for transfer: %s -> %s (token=%s)",
+		ctx.TxHashString(), transfer.SrcAccount, transfer.DestAccount, transfer.Token,
+	)
+	return pb.TokenProgramType_TOKEN_OTHER
 }
 
 func CloneLiquidityEvent(orig *core.Event) *core.Event {
@@ -147,6 +177,8 @@ func CloneLiquidityEvent(orig *core.Event) *core.Event {
 		PairQuoteBalance:       src.PairQuoteBalance,
 		UserTokenBalance:       src.UserTokenBalance,
 		UserQuoteBalance:       src.UserQuoteBalance,
+		TokenProgram:           src.TokenProgram,
+		QuoteTokenProgram:      src.QuoteTokenProgram,
 	}
 
 	return &core.Event{
