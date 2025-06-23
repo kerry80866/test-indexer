@@ -258,7 +258,7 @@ func (m *GrpcStreamManager) blockRecvLoop(ctx context.Context) {
 			case *pb.SubscribeUpdate_Block:
 				// 检查是否丢失slot
 				if lastSlot != 0 && u.Block.Slot != lastSlot+1 {
-					m.slotChecker.Submit(lastSlot, u.Block.Slot-1)
+					m.slotChecker.Submit(lastSlot+1, u.Block.Slot-1)
 				}
 				lastSlot = u.Block.Slot
 				lastBlockTime = u.Block.BlockTime.Timestamp * 1000
