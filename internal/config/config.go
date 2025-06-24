@@ -6,7 +6,7 @@ import (
 )
 
 type MonitorConfig struct {
-	Port int `json:"port"` // 监控端口，0 表示关闭
+	Port int `yaml:"port"` // 监控端口，0 表示关闭
 }
 
 type LogConfig struct {
