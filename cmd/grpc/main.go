@@ -14,21 +14,18 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 	zerosvc "github.com/zeromicro/go-zero/core/service"
 	"log"
-	"os"
-	"os/signal"
 	"runtime/debug"
-	"syscall"
 )
 
 var configFile = flag.String("f", "etc/grpc.yaml", "the config file")
 
 func main() {
-	defer logger.Sync() // 保证日志一定会刷盘
 	defer func() {
 		if r := recover(); r != nil {
 			logger.Errorf("panic: %+v\nstack: %s", r, debug.Stack())
 		}
 	}()
+	defer logger.Sync()
 
 	flag.Parse()
 
@@ -71,21 +68,12 @@ func main() {
 	blockProcessor := grpc.NewBlockProcessor(serviceContext, blockChan)
 	sg.Add(blockProcessor)
 
-	logger.Info("Starting grpc stream service")
-
 	if c.Monitor.Port > 0 {
 		monitorServer := monitor.NewMonitorServer(c.Monitor.Port)
 		sg.Add(monitorServer)
 	}
 
 	// 启动服务
+	logger.Infof("索引器服务启动成功")
 	sg.Start()
-
-	// 等待退出信号
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
-	<-sig
-
-	logger.Info("Shutting down services...")
-	sg.Stop()
 }

@@ -96,11 +96,16 @@ func NewKafkaProducer(cfg KafkaProducerOption) (*kafka.Producer, error) {
 		lingerMs = defaultLingerMs
 	}
 
+	localIP, _ := utils.GetLocalIP()
+	if localIP == "" {
+		localIP = "unknown"
+	}
+
 	// 创建生产者
 	producer, err := kafka.NewProducer(&kafka.ConfigMap{
 		// 基础连接
 		"bootstrap.servers": cfg.Brokers,
-		"client.id":         fmt.Sprintf("solana-grpc-indexer-%s", utils.GetLocalIP()),
+		"client.id":         fmt.Sprintf("solana-grpc-indexer-%s", localIP),
 
 		// PLAINTEXT: 不加密(明文传输), 不认证
 		// SSL: 只加密，不认证
