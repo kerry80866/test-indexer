@@ -199,8 +199,8 @@ func extractSwapEvent(
 		TokenAmount:      event.TokenAmount, // 实际成交 token 数量
 		QuoteTokenAmount: event.SolAmount,   // 实际成交 SOL 数量（作为 quote）
 
-		Token:      event.Mint[:],           // 被交易的 token（base token）
-		QuoteToken: consts.NativeSOLMint[:], // quote token（SOL）
+		Token:      event.Mint[:],     // 被交易的 token（base token）
+		QuoteToken: consts.SOLMint[:], // quote token（SOL）
 
 		PairAddress:       pairAddress[:],      // 池子账户（Bonding Curve 主账户）
 		TokenAccount:      pairTokenAccount[:], // 池子持有 token 的 SPL TokenAccount

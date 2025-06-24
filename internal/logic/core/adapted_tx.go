@@ -111,9 +111,9 @@ func (tx *AdaptedTx) AppendSolToTokenBalances(solBalance *SolBalance) {
 
 	if balance, ok := tx.Balances[account]; ok {
 		// 检查 token 类型是否为 SOL
-		if balance.Token != consts.NativeSOLMint {
+		if balance.Token != consts.SOLMint {
 			logger.Errorf("[AppendSolToTokenBalances] token 类型异常: expected=%s, actual=%s, account=%s",
-				consts.NativeSOLMint, balance.Token, account)
+				consts.SOLMint, balance.Token, account)
 		}
 
 		// 检查 Owner 是否一致（理论上应等于自己）
@@ -146,7 +146,7 @@ func (tx *AdaptedTx) AppendSolToTokenBalances(solBalance *SolBalance) {
 		InnerIndex:     0x100 | solBalance.InnerIndex, // 偏移标记，避免与真实 SPL 指令混淆
 		PreBalance:     solBalance.PreBalance,
 		PostBalance:    solBalance.PostBalance,
-		Token:          consts.NativeSOLMint,
+		Token:          consts.SOLMint,
 		TokenProgramID: consts.TokenProgram,
 		TokenAccount:   account,
 		PreOwner:       account,

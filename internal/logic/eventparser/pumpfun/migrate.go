@@ -207,7 +207,7 @@ func extractMigrateEvent(
 		MigrationFee:     event.PoolMigrationFee, // 迁移费用(SOL)
 
 		Token:          event.Mint[:],
-		SrcQuoteToken:  consts.NativeSOLMint[:],
+		SrcQuoteToken:  consts.SOLMint[:],
 		DestQuoteToken: destPoolQuoteBalance.Token[:],
 
 		SrcPairAddress:  srcPoolAddress[:],

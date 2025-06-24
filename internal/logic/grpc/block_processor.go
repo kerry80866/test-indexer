@@ -272,7 +272,7 @@ func (p *BlockProcessor) loadQuotePricesFromCache(blockTime int64) []*pb2.TokenP
 	result := make([]*pb2.TokenPrice, 0, len(defs)+1)
 	// NativeSOL 用 WSOL 价格
 	result = append(result, &pb2.TokenPrice{
-		Token:    consts.NativeSOLMint[:],
+		Token:    consts.SOLMint[:],
 		Decimals: tools.WSOLDecimals,
 		Price:    priceVals[0],
 	})

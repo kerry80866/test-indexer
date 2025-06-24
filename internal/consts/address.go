@@ -13,6 +13,7 @@ const (
 	ComputeBudgetProgramIdStr = "ComputeBudget111111111111111111111111111111"
 
 	// USD 计价基础报价币（具有稳定市场价格）
+	SOLMintStr  = "So11111111111111111111111111111111111111111"
 	WSOLMintStr = "So11111111111111111111111111111111111111112"
 	USDCMintStr = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
 	USDTMintStr = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"
@@ -49,15 +50,6 @@ const (
 )
 
 var (
-	// 特殊语义地址
-	NativeSOLMint  = types.Pubkey{} // 原生 SOL（非 SPL）
-	InvalidAddress = types.Pubkey{  // 表示无效地址（全 0xFF）
-		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	}
-
 	// Programs
 	SystemProgram          = types.PubkeyFromBase58(SystemProgramStr)
 	TokenProgram           = types.PubkeyFromBase58(TokenProgramStr)
@@ -65,6 +57,7 @@ var (
 	AssociatedTokenProgram = types.PubkeyFromBase58(AssociatedTokenProgramStr)
 
 	// 稳定报价币（USD 估值）
+	SOLMint  = types.PubkeyFromBase58(SOLMintStr)
 	WSOLMint = types.PubkeyFromBase58(WSOLMintStr)
 	USDCMint = types.PubkeyFromBase58(USDCMintStr)
 	USDTMint = types.PubkeyFromBase58(USDTMintStr)

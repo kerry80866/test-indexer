@@ -162,7 +162,7 @@ func extractCreateEvent(
 		QuoteTokenAmount: 0,
 
 		Token:      event.Mint[:],
-		QuoteToken: consts.NativeSOLMint[:], // quote token（SOL）
+		QuoteToken: consts.SOLMint[:], // quote token（SOL）
 
 		TokenAccount:      poolTokenAccount[:],
 		QuoteTokenAccount: poolAddress[:], // 对于 SOL，没有 token account，直接使用主账户地址。

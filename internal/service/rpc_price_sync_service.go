@@ -222,7 +222,7 @@ func isConfidenceTooLow(token types.Pubkey, price, conf float64) bool {
 	switch token {
 	case consts.USDTMint, consts.USDCMint:
 		return conf > 0.005*price // 稳定币允许最大 0.5% 的置信误差
-	case consts.WSOLMint, consts.NativeSOLMint:
+	case consts.WSOLMint, consts.SOLMint:
 		return conf > 0.02*price // SOL 允许最大 2% 的误差
 	default:
 		return conf > 0.05*price // 其他未知 token，允许最大 5%
